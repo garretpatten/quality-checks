@@ -55,17 +55,18 @@ The workflow checks only the files that have been changed in the pull request, m
 
 ## Input Parameters
 
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| `prettier_run` | boolean | No | `true` | Whether to run the Prettier code formatter check |
-| `shellcheck_run` | boolean | No | `true` | Whether to run the ShellCheck shell script linter |
-| `runs_on` | string | No | `ubuntu-latest` | The GitHub Actions runner to use for execution |
+| Parameter        | Type    | Required | Default         | Description                                       |
+| ---------------- | ------- | -------- | --------------- | ------------------------------------------------- |
+| `prettier_run`   | boolean | No       | `true`          | Whether to run the Prettier code formatter check  |
+| `shellcheck_run` | boolean | No       | `true`          | Whether to run the ShellCheck shell script linter |
+| `runs_on`        | string  | No       | `ubuntu-latest` | The GitHub Actions runner to use for execution    |
 
 ## Supported Linters
 
 ### Prettier
 
 Prettier checks code formatting for the following file types:
+
 - JavaScript (`.js`, `.jsx`)
 - TypeScript (`.ts`, `.tsx`)
 - JSON (`.json`)
@@ -78,6 +79,7 @@ Prettier runs with the `--check` flag, which means it will fail if any files are
 ### ShellCheck
 
 ShellCheck analyzes shell scripts for common errors and best practices. It checks the following file types:
+
 - Shell scripts (`.sh`)
 - Bash scripts (`.bash`)
 - Zsh scripts (`.zsh`)
