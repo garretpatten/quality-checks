@@ -19,16 +19,11 @@ To use this reusable workflow in your repository, create a workflow file (e.g., 
 ```yaml
 name: 'Quality Checks'
 
-on:
-  pull_request:
-  push:
-    branches:
-      - main
-      - master
+on: pull_request
 
 jobs:
   quality-checks:
-    uses: ./.github/workflows/quality-checks.yml
+    uses: garretpatten/quality-checks/.github/workflows/quality-checks.yml@master
     with:
       actionlint_run: true
       eslint_run: true
