@@ -1,15 +1,19 @@
-name: Test Workflow
+name: 'Test Workflow'
 
-on:
-  pull_request:
-  push:
-    branches:
-      - master
+on: pull_request
 
 jobs:
   Linters:
     uses: ./.github/workflows/quality-checks.yaml
     with:
+      actionlint_run: true
+      eslint_run: true
+      hadolint_run: true
+      jq_run: true
+      markdownlint_run: true
       prettier_run: true
+      ruff_run: true
       shellcheck_run: true
+      taplo_run: true
+      yamllint_run: true
     secrets: inherit
