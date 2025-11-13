@@ -4,7 +4,7 @@ on:
   workflow_call:
     inputs:
       prettier_run:
-        description: 'Boolean flag indicating whether the Prettier linter should be executed.'
+        description: 'Boolean flag indicating whether the Prettier formatting check should be executed.'
         required: false
         default: true
         type: boolean
@@ -22,24 +22,24 @@ on:
 jobs:
   prettier:
     if: ${{ inputs.prettier_run == true }}
-    name: Prettier - Code Formatter
+    name: 'Prettier - Code Formatter'
     runs-on: ${{ inputs.runs_on }}
 
     steps:
-      - name: Checkout Code
+      - name: 'Checkout Code'
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
         with:
           fetch-depth: 0
 
-      - name: Setup Node.js
+      - name: 'Setup Node.js'
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: Install Prettier
+      - name: 'Install Prettier'
         run: npm install -g prettier
 
-      - name: Get changed files
+      - name: 'Get changed files'
         id: changed-files
         uses: tj-actions/changed-files@v44
         with:
@@ -55,7 +55,7 @@ jobs:
             **/*.yml
             **/*.yaml
 
-      - name: Run Prettier
+      - name: 'Run Prettier'
         run: |
           set -e
           if [ "${{ steps.changed-files.outputs.any_changed }}" == "true" ]; then
@@ -71,21 +71,21 @@ jobs:
 
   shellcheck:
     if: ${{ inputs.shellcheck_run == true }}
-    name: ShellCheck - Shell Script Linter
+    name: 'ShellCheck - Shell Script Linter'
     runs-on: ${{ inputs.runs_on }}
 
     steps:
-      - name: Checkout Code
+      - name: 'Checkout Code'
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
         with:
           fetch-depth: 0
 
-      - name: Install ShellCheck
+      - name: 'Install ShellCheck'
         run: |
           sudo apt-get update
           sudo apt-get install -y shellcheck
 
-      - name: Get changed shell files
+      - name: 'Get changed shell files'
         id: changed-files
         uses: tj-actions/changed-files@v44
         with:
@@ -94,7 +94,7 @@ jobs:
             **/*.bash
             **/*.zsh
 
-      - name: Run ShellCheck
+      - name: 'Run ShellCheck'
         run: |
           set -e
           if [ "${{ steps.changed-files.outputs.any_changed }}" == "true" ]; then

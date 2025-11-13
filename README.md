@@ -17,7 +17,7 @@ This repository contains a reusable GitHub Actions workflow that performs qualit
 To use this reusable workflow in your repository, create a workflow file (e.g., `.github/workflows/quality-checks.yml`) that calls it:
 
 ```yaml
-name: Quality Checks
+name: 'Quality Checks'
 
 on:
   pull_request:
@@ -34,17 +34,6 @@ jobs:
       shellcheck_run: true
       runs_on: ubuntu-latest
     secrets: inherit
-```
-
-You can also selectively enable/disable linters:
-
-```yaml
-jobs:
-  quality-checks:
-    uses: ./.github/workflows/quality-checks.yml
-    with:
-      prettier_run: true
-      shellcheck_run: false
 ```
 
 ## Reusable Workflow Architecture
