@@ -1,0 +1,109 @@
+name: Quality Checks
+
+on:
+  workflow_call:
+    inputs:
+      prettier_run:
+        description: 'Boolean flag indicating whether the Prettier linter should be executed.'
+        required: false
+        default: true
+        type: boolean
+      shellcheck_run:
+        description: 'Boolean flag indicating whether the shellcheck linter should be executed.'
+        required: false
+        default: true
+        type: boolean
+      runs_on:
+        description: 'The Github Action runner on which to run the quality checks'
+        required: false
+        type: string
+        default: 'ubuntu-latest'
+
+jobs:
+  prettier:
+    if: ${{ inputs.prettier_run == true }}
+    name: Prettier - Code Formatter
+    runs-on: ${{ inputs.runs_on }}
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Prettier
+        run: npm install -g prettier
+
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v44
+        with:
+          files: |
+            **/*.js
+            **/*.jsx
+            **/*.ts
+            **/*.tsx
+            **/*.json
+            **/*.css
+            **/*.scss
+            **/*.md
+            **/*.yml
+            **/*.yaml
+
+      - name: Run Prettier
+        run: |
+          set -e
+          if [ "${{ steps.changed-files.outputs.any_changed }}" == "true" ]; then
+            files="${{ steps.changed-files.outputs.all_changed_files }}"
+            for file in $files; do
+              if [ -n "$file" ]; then
+                prettier --check "$file"
+              fi
+            done
+          else
+            echo "No files to check with Prettier"
+          fi
+
+  shellcheck:
+    if: ${{ inputs.shellcheck_run == true }}
+    name: ShellCheck - Shell Script Linter
+    runs-on: ${{ inputs.runs_on }}
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
+        with:
+          fetch-depth: 0
+
+      - name: Install ShellCheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck
+
+      - name: Get changed shell files
+        id: changed-files
+        uses: tj-actions/changed-files@v44
+        with:
+          files: |
+            **/*.sh
+            **/*.bash
+            **/*.zsh
+
+      - name: Run ShellCheck
+        run: |
+          set -e
+          if [ "${{ steps.changed-files.outputs.any_changed }}" == "true" ]; then
+            files="${{ steps.changed-files.outputs.all_changed_files }}"
+            for file in $files; do
+              if [ -n "$file" ]; then
+                shellcheck "$file"
+              fi
+            done
+          else
+            echo "No shell files to check"
+          fi

@@ -1,0 +1,15 @@
+name: Test Workflow
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+
+jobs:
+  Linters:
+    uses: ./.github/workflows/quality-checks.yaml
+    with:
+      prettier_run: true
+      shellcheck_run: true
+    secrets: inherit
