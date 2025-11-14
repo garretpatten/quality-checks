@@ -87,12 +87,14 @@ jobs:
           fi
           CHANGED_FILES=$(git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD | grep -E '\.(yml|yaml)$' | grep -E '\.github/(workflows|actions)' || true)
           if [ -n "$CHANGED_FILES" ]; then
-            echo "files<<EOF" >> $GITHUB_OUTPUT
-            echo "$CHANGED_FILES" >> $GITHUB_OUTPUT
-            echo "EOF" >> $GITHUB_OUTPUT
-            echo "any_changed=true" >> $GITHUB_OUTPUT
+            {
+              echo "files<<EOF"
+              echo "$CHANGED_FILES"
+              echo "EOF"
+              echo "any_changed=true"
+            } >> "$GITHUB_OUTPUT"
           else
-            echo "any_changed=false" >> $GITHUB_OUTPUT
+            echo "any_changed=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: 'Run actionlint'
@@ -148,12 +150,14 @@ jobs:
           fi
           CHANGED_FILES=$(git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD | grep -E '\.(js|jsx|ts|tsx)$' || true)
           if [ -n "$CHANGED_FILES" ]; then
-            echo "files<<EOF" >> $GITHUB_OUTPUT
-            echo "$CHANGED_FILES" >> $GITHUB_OUTPUT
-            echo "EOF" >> $GITHUB_OUTPUT
-            echo "any_changed=true" >> $GITHUB_OUTPUT
+            {
+              echo "files<<EOF"
+              echo "$CHANGED_FILES"
+              echo "EOF"
+              echo "any_changed=true"
+            } >> "$GITHUB_OUTPUT"
           else
-            echo "any_changed=false" >> $GITHUB_OUTPUT
+            echo "any_changed=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: 'Run ESLint'
@@ -199,12 +203,14 @@ jobs:
           fi
           CHANGED_FILES=$(git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD | grep -iE '(Dockerfile|\.dockerfile)' || true)
           if [ -n "$CHANGED_FILES" ]; then
-            echo "files<<EOF" >> $GITHUB_OUTPUT
-            echo "$CHANGED_FILES" >> $GITHUB_OUTPUT
-            echo "EOF" >> $GITHUB_OUTPUT
-            echo "any_changed=true" >> $GITHUB_OUTPUT
+            {
+              echo "files<<EOF"
+              echo "$CHANGED_FILES"
+              echo "EOF"
+              echo "any_changed=true"
+            } >> "$GITHUB_OUTPUT"
           else
-            echo "any_changed=false" >> $GITHUB_OUTPUT
+            echo "any_changed=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: 'Run Hadolint'
@@ -249,12 +255,14 @@ jobs:
           fi
           CHANGED_FILES=$(git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD | grep -E '\.json$' || true)
           if [ -n "$CHANGED_FILES" ]; then
-            echo "files<<EOF" >> $GITHUB_OUTPUT
-            echo "$CHANGED_FILES" >> $GITHUB_OUTPUT
-            echo "EOF" >> $GITHUB_OUTPUT
-            echo "any_changed=true" >> $GITHUB_OUTPUT
+            {
+              echo "files<<EOF"
+              echo "$CHANGED_FILES"
+              echo "EOF"
+              echo "any_changed=true"
+            } >> "$GITHUB_OUTPUT"
           else
-            echo "any_changed=false" >> $GITHUB_OUTPUT
+            echo "any_changed=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: 'Run jq'
@@ -302,12 +310,14 @@ jobs:
           fi
           CHANGED_FILES=$(git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD | grep -E '\.(md|markdown)$' || true)
           if [ -n "$CHANGED_FILES" ]; then
-            echo "files<<EOF" >> $GITHUB_OUTPUT
-            echo "$CHANGED_FILES" >> $GITHUB_OUTPUT
-            echo "EOF" >> $GITHUB_OUTPUT
-            echo "any_changed=true" >> $GITHUB_OUTPUT
+            {
+              echo "files<<EOF"
+              echo "$CHANGED_FILES"
+              echo "EOF"
+              echo "any_changed=true"
+            } >> "$GITHUB_OUTPUT"
           else
-            echo "any_changed=false" >> $GITHUB_OUTPUT
+            echo "any_changed=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: 'Run markdownlint-cli2'
@@ -355,12 +365,14 @@ jobs:
           fi
           CHANGED_FILES=$(git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD | grep -E '\.(js|jsx|ts|tsx|json|css|scss|md|yml|yaml)$' || true)
           if [ -n "$CHANGED_FILES" ]; then
-            echo "files<<EOF" >> $GITHUB_OUTPUT
-            echo "$CHANGED_FILES" >> $GITHUB_OUTPUT
-            echo "EOF" >> $GITHUB_OUTPUT
-            echo "any_changed=true" >> $GITHUB_OUTPUT
+            {
+              echo "files<<EOF"
+              echo "$CHANGED_FILES"
+              echo "EOF"
+              echo "any_changed=true"
+            } >> "$GITHUB_OUTPUT"
           else
-            echo "any_changed=false" >> $GITHUB_OUTPUT
+            echo "any_changed=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: 'Run Prettier'
@@ -404,12 +416,14 @@ jobs:
           fi
           CHANGED_FILES=$(git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD | grep -E '\.(py|pyw)$' || true)
           if [ -n "$CHANGED_FILES" ]; then
-            echo "files<<EOF" >> $GITHUB_OUTPUT
-            echo "$CHANGED_FILES" >> $GITHUB_OUTPUT
-            echo "EOF" >> $GITHUB_OUTPUT
-            echo "any_changed=true" >> $GITHUB_OUTPUT
+            {
+              echo "files<<EOF"
+              echo "$CHANGED_FILES"
+              echo "EOF"
+              echo "any_changed=true"
+            } >> "$GITHUB_OUTPUT"
           else
-            echo "any_changed=false" >> $GITHUB_OUTPUT
+            echo "any_changed=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: 'Run Ruff'
@@ -454,12 +468,14 @@ jobs:
           fi
           CHANGED_FILES=$(git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD | grep -E '\.(sh|bash|zsh)$' || true)
           if [ -n "$CHANGED_FILES" ]; then
-            echo "files<<EOF" >> $GITHUB_OUTPUT
-            echo "$CHANGED_FILES" >> $GITHUB_OUTPUT
-            echo "EOF" >> $GITHUB_OUTPUT
-            echo "any_changed=true" >> $GITHUB_OUTPUT
+            {
+              echo "files<<EOF"
+              echo "$CHANGED_FILES"
+              echo "EOF"
+              echo "any_changed=true"
+            } >> "$GITHUB_OUTPUT"
           else
-            echo "any_changed=false" >> $GITHUB_OUTPUT
+            echo "any_changed=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: 'Run ShellCheck'
@@ -506,12 +522,14 @@ jobs:
           fi
           CHANGED_FILES=$(git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD | grep -E '\.(toml)$' || true)
           if [ -n "$CHANGED_FILES" ]; then
-            echo "files<<EOF" >> $GITHUB_OUTPUT
-            echo "$CHANGED_FILES" >> $GITHUB_OUTPUT
-            echo "EOF" >> $GITHUB_OUTPUT
-            echo "any_changed=true" >> $GITHUB_OUTPUT
+            {
+              echo "files<<EOF"
+              echo "$CHANGED_FILES"
+              echo "EOF"
+              echo "any_changed=true"
+            } >> "$GITHUB_OUTPUT"
           else
-            echo "any_changed=false" >> $GITHUB_OUTPUT
+            echo "any_changed=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: 'Run Taplo'
@@ -555,12 +573,14 @@ jobs:
           fi
           CHANGED_FILES=$(git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD | grep -E '\.(yml|yaml)$' || true)
           if [ -n "$CHANGED_FILES" ]; then
-            echo "files<<EOF" >> $GITHUB_OUTPUT
-            echo "$CHANGED_FILES" >> $GITHUB_OUTPUT
-            echo "EOF" >> $GITHUB_OUTPUT
-            echo "any_changed=true" >> $GITHUB_OUTPUT
+            {
+              echo "files<<EOF"
+              echo "$CHANGED_FILES"
+              echo "EOF"
+              echo "any_changed=true"
+            } >> "$GITHUB_OUTPUT"
           else
-            echo "any_changed=false" >> $GITHUB_OUTPUT
+            echo "any_changed=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: 'Run yamllint'
