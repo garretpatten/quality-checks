@@ -1,55 +1,74 @@
+---
 name: Quality Checks
 
 on:
   workflow_call:
     inputs:
       actionlint_run:
-        description: 'Boolean flag indicating whether the actionlint linter should be executed.'
+        description: >
+          Boolean flag indicating whether the actionlint linter should be
+          executed.
         required: false
         default: true
         type: boolean
       eslint_run:
-        description: 'Boolean flag indicating whether the eslint linter should be executed.'
+        description: >
+          Boolean flag indicating whether the eslint linter should be
+          executed.
         required: false
         default: true
         type: boolean
       hadolint_run:
-        description: 'Boolean flag indicating whether the hadolint linter should be executed.'
+        description: >
+          Boolean flag indicating whether the hadolint linter should be
+          executed.
         required: false
         default: true
         type: boolean
       jq_run:
-        description: 'Boolean flag indicating whether the jq JSON validator should be executed.'
+        description: >
+          Boolean flag indicating whether the jq JSON validator should be
+          executed.
         required: false
         default: true
         type: boolean
       markdownlint_run:
-        description: 'Boolean flag indicating whether the markdownlint-cli2 linter should be executed.'
+        description: >
+          Boolean flag indicating whether the markdownlint-cli2 linter should
+          be executed.
         required: false
         default: true
         type: boolean
       prettier_run:
-        description: 'Boolean flag indicating whether the Prettier formatting check should be executed.'
+        description: >
+          Boolean flag indicating whether the Prettier formatting check should
+          be executed.
         required: false
         default: true
         type: boolean
       ruff_run:
-        description: 'Boolean flag indicating whether the ruff linter should be executed.'
+        description: >
+          Boolean flag indicating whether the ruff linter should be executed.
         required: false
         default: true
         type: boolean
       shellcheck_run:
-        description: 'Boolean flag indicating whether the shellcheck linter should be executed.'
+        description: >
+          Boolean flag indicating whether the shellcheck linter should be
+          executed.
         required: false
         default: true
         type: boolean
       taplo_run:
-        description: 'Boolean flag indicating whether the taplo linter should be executed.'
+        description: >
+          Boolean flag indicating whether the taplo linter should be executed.
         required: false
         default: true
         type: boolean
       yamllint_run:
-        description: 'Boolean flag indicating whether the yamllint linter should be executed.'
+        description: >
+          Boolean flag indicating whether the yamllint linter should be
+          executed.
         required: false
         default: true
         type: boolean
@@ -57,24 +76,28 @@ on:
 jobs:
   actionlint:
     if: ${{ inputs.actionlint_run == true }}
-    name: 'Actionlint - GitHub Actions Linter'
+    name: "Actionlint - GitHub Actions Linter"
     runs-on: ubuntu-latest
 
     steps:
-      - name: 'Checkout Code'
+      - name: "Checkout Code"
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
         with:
           fetch-depth: 0
 
-      - name: 'Install actionlint'
+      - name: "Install actionlint"
         run: |
-          DOWNLOAD_URL=$(curl -s https://api.github.com/repos/rhysd/actionlint/releases/latest | grep "browser_download_url.*linux_amd64.tar.gz" | cut -d '"' -f 4)
+          DOWNLOAD_URL=$(
+            curl -s https://api.github.com/repos/rhysd/actionlint/releases/latest |
+            grep "browser_download_url.*linux_amd64.tar.gz" |
+            cut -d '"' -f 4
+          )
           curl -sSfL "$DOWNLOAD_URL" -o actionlint.tar.gz
           tar -xzf actionlint.tar.gz
           sudo mv actionlint /usr/local/bin/
           rm actionlint.tar.gz
 
-      - name: 'Get changed GitHub Actions files'
+      - name: "Get changed GitHub Actions files"
         id: changed-files
         run: |
           git fetch origin main master 2>/dev/null || true
@@ -85,7 +108,11 @@ jobs:
           else
             BASE_REF="HEAD~1"
           fi
-          CHANGED_FILES=$(git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD | grep -E '\.(yml|yaml)$' | grep -E '\.github/(workflows|actions)' || true)
+          CHANGED_FILES=$(
+            git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD |
+            grep -E '\.(yml|yaml)$' |
+            grep -E '\.github/(workflows|actions)' || true
+          )
           if [ -n "$CHANGED_FILES" ]; then
             {
               echo "files<<EOF"
@@ -97,11 +124,12 @@ jobs:
             echo "any_changed=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: 'Run actionlint'
+      - name: "Run actionlint"
         run: |
           set -e
           if [ "${{ steps.changed-files.outputs.any_changed }}" == "true" ]; then
-            echo "${{ steps.changed-files.outputs.files }}" | while read -r file; do
+            echo "${{ steps.changed-files.outputs.files }}" |
+            while read -r file; do
               if [ -n "$file" ]; then
                 actionlint "$file"
               fi
@@ -112,21 +140,21 @@ jobs:
 
   eslint:
     if: ${{ inputs.eslint_run == true }}
-    name: 'ESLint - JavaScript/TypeScript Linter'
+    name: "ESLint - JavaScript/TypeScript Linter"
     runs-on: ubuntu-latest
 
     steps:
-      - name: 'Checkout Code'
+      - name: "Checkout Code"
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
         with:
           fetch-depth: 0
 
-      - name: 'Setup Node.js'
+      - name: "Setup Node.js"
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: "20"
 
-      - name: 'Install dependencies'
+      - name: "Install dependencies"
         run: |
           if [ -f package.json ]; then
             npm ci
@@ -134,10 +162,10 @@ jobs:
             echo "No package.json found, skipping dependency installation"
           fi
 
-      - name: 'Install ESLint'
+      - name: "Install ESLint"
         run: npm install -g eslint
 
-      - name: 'Get changed JavaScript/TypeScript files'
+      - name: "Get changed JavaScript/TypeScript files"
         id: changed-files
         run: |
           git fetch origin main master 2>/dev/null || true
@@ -148,7 +176,10 @@ jobs:
           else
             BASE_REF="HEAD~1"
           fi
-          CHANGED_FILES=$(git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD | grep -E '\.(js|jsx|ts|tsx)$' || true)
+          CHANGED_FILES=$(
+            git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD |
+            grep -E '\.(js|jsx|ts|tsx)$' || true
+          )
           if [ -n "$CHANGED_FILES" ]; then
             {
               echo "files<<EOF"
@@ -160,11 +191,12 @@ jobs:
             echo "any_changed=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: 'Run ESLint'
+      - name: "Run ESLint"
         run: |
           set -e
           if [ "${{ steps.changed-files.outputs.any_changed }}" == "true" ]; then
-            echo "${{ steps.changed-files.outputs.files }}" | while read -r file; do
+            echo "${{ steps.changed-files.outputs.files }}" |
+            while read -r file; do
               if [ -n "$file" ]; then
                 npx eslint "$file"
               fi
@@ -175,22 +207,24 @@ jobs:
 
   hadolint:
     if: ${{ inputs.hadolint_run == true }}
-    name: 'Hadolint - Dockerfile Linter'
+    name: "Hadolint - Dockerfile Linter"
     runs-on: ubuntu-latest
 
     steps:
-      - name: 'Checkout Code'
+      - name: "Checkout Code"
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
         with:
           fetch-depth: 0
 
-      - name: 'Install Hadolint'
+      - name: "Install Hadolint"
         run: |
-          curl -sSfL https://github.com/hadolint/hadolint/releases/latest/download/hadolint-Linux-x86_64 -o hadolint
+          curl -sSfL \
+            https://github.com/hadolint/hadolint/releases/latest/download/hadolint-Linux-x86_64 \
+            -o hadolint
           chmod +x hadolint
           sudo mv hadolint /usr/local/bin/
 
-      - name: 'Get changed Dockerfile files'
+      - name: "Get changed Dockerfile files"
         id: changed-files
         run: |
           git fetch origin main master 2>/dev/null || true
@@ -201,7 +235,10 @@ jobs:
           else
             BASE_REF="HEAD~1"
           fi
-          CHANGED_FILES=$(git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD | grep -iE '(Dockerfile|\.dockerfile)' || true)
+          CHANGED_FILES=$(
+            git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD |
+            grep -iE '(Dockerfile|\.dockerfile)' || true
+          )
           if [ -n "$CHANGED_FILES" ]; then
             {
               echo "files<<EOF"
@@ -213,11 +250,12 @@ jobs:
             echo "any_changed=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: 'Run Hadolint'
+      - name: "Run Hadolint"
         run: |
           set -e
           if [ "${{ steps.changed-files.outputs.any_changed }}" == "true" ]; then
-            echo "${{ steps.changed-files.outputs.files }}" | while read -r file; do
+            echo "${{ steps.changed-files.outputs.files }}" |
+            while read -r file; do
               if [ -n "$file" ]; then
                 hadolint "$file"
               fi
@@ -228,21 +266,21 @@ jobs:
 
   jq:
     if: ${{ inputs.jq_run == true }}
-    name: 'jq - JSON Validator'
+    name: "jq - JSON Validator"
     runs-on: ubuntu-latest
 
     steps:
-      - name: 'Checkout Code'
+      - name: "Checkout Code"
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
         with:
           fetch-depth: 0
 
-      - name: 'Install jq'
+      - name: "Install jq"
         run: |
           sudo apt-get update
           sudo apt-get install -y jq
 
-      - name: 'Get changed JSON files'
+      - name: "Get changed JSON files"
         id: changed-files
         run: |
           git fetch origin main master 2>/dev/null || true
@@ -253,7 +291,10 @@ jobs:
           else
             BASE_REF="HEAD~1"
           fi
-          CHANGED_FILES=$(git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD | grep -E '\.json$' || true)
+          CHANGED_FILES=$(
+            git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD |
+            grep -E '\.json$' || true
+          )
           if [ -n "$CHANGED_FILES" ]; then
             {
               echo "files<<EOF"
@@ -265,11 +306,12 @@ jobs:
             echo "any_changed=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: 'Run jq'
+      - name: "Run jq"
         run: |
           set -e
           if [ "${{ steps.changed-files.outputs.any_changed }}" == "true" ]; then
-            echo "${{ steps.changed-files.outputs.files }}" | while read -r file; do
+            echo "${{ steps.changed-files.outputs.files }}" |
+            while read -r file; do
               if [ -n "$file" ]; then
                 jq -e . "$file" > /dev/null
               fi
@@ -280,24 +322,24 @@ jobs:
 
   markdownlint:
     if: ${{ inputs.markdownlint_run == true }}
-    name: 'Markdownlint - Markdown Linter'
+    name: "Markdownlint - Markdown Linter"
     runs-on: ubuntu-latest
 
     steps:
-      - name: 'Checkout Code'
+      - name: "Checkout Code"
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
         with:
           fetch-depth: 0
 
-      - name: 'Setup Node.js'
+      - name: "Setup Node.js"
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: "20"
 
-      - name: 'Install markdownlint-cli2'
+      - name: "Install markdownlint-cli2"
         run: npm install -g markdownlint-cli2
 
-      - name: 'Get changed Markdown files'
+      - name: "Get changed Markdown files"
         id: changed-files
         run: |
           git fetch origin main master 2>/dev/null || true
@@ -308,7 +350,10 @@ jobs:
           else
             BASE_REF="HEAD~1"
           fi
-          CHANGED_FILES=$(git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD | grep -E '\.(md|markdown)$' || true)
+          CHANGED_FILES=$(
+            git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD |
+            grep -E '\.(md|markdown)$' || true
+          )
           if [ -n "$CHANGED_FILES" ]; then
             {
               echo "files<<EOF"
@@ -320,11 +365,12 @@ jobs:
             echo "any_changed=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: 'Run markdownlint-cli2'
+      - name: "Run markdownlint-cli2"
         run: |
           set -e
           if [ "${{ steps.changed-files.outputs.any_changed }}" == "true" ]; then
-            echo "${{ steps.changed-files.outputs.files }}" | while read -r file; do
+            echo "${{ steps.changed-files.outputs.files }}" |
+            while read -r file; do
               if [ -n "$file" ]; then
                 markdownlint-cli2 "$file"
               fi
@@ -335,24 +381,24 @@ jobs:
 
   prettier:
     if: ${{ inputs.prettier_run == true }}
-    name: 'Prettier - Code Formatter'
+    name: "Prettier - Code Formatter"
     runs-on: ubuntu-latest
 
     steps:
-      - name: 'Checkout Code'
+      - name: "Checkout Code"
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
         with:
           fetch-depth: 0
 
-      - name: 'Setup Node.js'
+      - name: "Setup Node.js"
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: "20"
 
-      - name: 'Install Prettier'
+      - name: "Install Prettier"
         run: npm install -g prettier
 
-      - name: 'Get changed files'
+      - name: "Get changed files"
         id: changed-files
         run: |
           git fetch origin main master 2>/dev/null || true
@@ -363,7 +409,10 @@ jobs:
           else
             BASE_REF="HEAD~1"
           fi
-          CHANGED_FILES=$(git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD | grep -E '\.(js|jsx|ts|tsx|json|css|scss|md|yml|yaml)$' || true)
+          CHANGED_FILES=$(
+            git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD |
+            grep -E '\.(js|jsx|ts|tsx|json|css|scss|md|yml|yaml)$' || true
+          )
           if [ -n "$CHANGED_FILES" ]; then
             {
               echo "files<<EOF"
@@ -375,11 +424,12 @@ jobs:
             echo "any_changed=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: 'Run Prettier'
+      - name: "Run Prettier"
         run: |
           set -e
           if [ "${{ steps.changed-files.outputs.any_changed }}" == "true" ]; then
-            echo "${{ steps.changed-files.outputs.files }}" | while read -r file; do
+            echo "${{ steps.changed-files.outputs.files }}" |
+            while read -r file; do
               if [ -n "$file" ]; then
                 prettier --check "$file"
               fi
@@ -390,20 +440,20 @@ jobs:
 
   ruff:
     if: ${{ inputs.ruff_run == true }}
-    name: 'Ruff - Python Linter'
+    name: "Ruff - Python Linter"
     runs-on: ubuntu-latest
 
     steps:
-      - name: 'Checkout Code'
+      - name: "Checkout Code"
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
         with:
           fetch-depth: 0
 
-      - name: 'Install Ruff'
+      - name: "Install Ruff"
         run: |
           pip3 install ruff
 
-      - name: 'Get changed Python files'
+      - name: "Get changed Python files"
         id: changed-files
         run: |
           git fetch origin main master 2>/dev/null || true
@@ -414,7 +464,10 @@ jobs:
           else
             BASE_REF="HEAD~1"
           fi
-          CHANGED_FILES=$(git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD | grep -E '\.(py|pyw)$' || true)
+          CHANGED_FILES=$(
+            git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD |
+            grep -E '\.(py|pyw)$' || true
+          )
           if [ -n "$CHANGED_FILES" ]; then
             {
               echo "files<<EOF"
@@ -426,11 +479,12 @@ jobs:
             echo "any_changed=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: 'Run Ruff'
+      - name: "Run Ruff"
         run: |
           set -e
           if [ "${{ steps.changed-files.outputs.any_changed }}" == "true" ]; then
-            echo "${{ steps.changed-files.outputs.files }}" | while read -r file; do
+            echo "${{ steps.changed-files.outputs.files }}" |
+            while read -r file; do
               if [ -n "$file" ]; then
                 ruff check "$file"
               fi
@@ -441,21 +495,21 @@ jobs:
 
   shellcheck:
     if: ${{ inputs.shellcheck_run == true }}
-    name: 'ShellCheck - Shell Script Linter'
+    name: "ShellCheck - Shell Script Linter"
     runs-on: ubuntu-latest
 
     steps:
-      - name: 'Checkout Code'
+      - name: "Checkout Code"
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
         with:
           fetch-depth: 0
 
-      - name: 'Install ShellCheck'
+      - name: "Install ShellCheck"
         run: |
           sudo apt-get update
           sudo apt-get install -y shellcheck
 
-      - name: 'Get changed shell files'
+      - name: "Get changed shell files"
         id: changed-files
         run: |
           git fetch origin main master 2>/dev/null || true
@@ -466,7 +520,10 @@ jobs:
           else
             BASE_REF="HEAD~1"
           fi
-          CHANGED_FILES=$(git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD | grep -E '\.(sh|bash|zsh)$' || true)
+          CHANGED_FILES=$(
+            git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD |
+            grep -E '\.(sh|bash|zsh)$' || true
+          )
           if [ -n "$CHANGED_FILES" ]; then
             {
               echo "files<<EOF"
@@ -478,11 +535,12 @@ jobs:
             echo "any_changed=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: 'Run ShellCheck'
+      - name: "Run ShellCheck"
         run: |
           set -e
           if [ "${{ steps.changed-files.outputs.any_changed }}" == "true" ]; then
-            echo "${{ steps.changed-files.outputs.files }}" | while read -r file; do
+            echo "${{ steps.changed-files.outputs.files }}" |
+            while read -r file; do
               if [ -n "$file" ]; then
                 shellcheck "$file"
               fi
@@ -493,23 +551,25 @@ jobs:
 
   taplo:
     if: ${{ inputs.taplo_run == true }}
-    name: 'Taplo - TOML Linter'
+    name: "Taplo - TOML Linter"
     runs-on: ubuntu-latest
 
     steps:
-      - name: 'Checkout Code'
+      - name: "Checkout Code"
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
         with:
           fetch-depth: 0
 
-      - name: 'Install Taplo'
+      - name: "Install Taplo"
         run: |
-          curl -L https://github.com/tamasfe/taplo/releases/latest/download/taplo-linux-x86_64.gz -o taplo.gz
+          curl -L \
+            https://github.com/tamasfe/taplo/releases/latest/download/taplo-linux-x86_64.gz \
+            -o taplo.gz
           gunzip taplo.gz
           chmod +x taplo
           sudo mv taplo /usr/local/bin/
 
-      - name: 'Get changed TOML files'
+      - name: "Get changed TOML files"
         id: changed-files
         run: |
           git fetch origin main master 2>/dev/null || true
@@ -520,7 +580,10 @@ jobs:
           else
             BASE_REF="HEAD~1"
           fi
-          CHANGED_FILES=$(git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD | grep -E '\.(toml)$' || true)
+          CHANGED_FILES=$(
+            git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD |
+            grep -E '\.(toml)$' || true
+          )
           if [ -n "$CHANGED_FILES" ]; then
             {
               echo "files<<EOF"
@@ -532,11 +595,12 @@ jobs:
             echo "any_changed=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: 'Run Taplo'
+      - name: "Run Taplo"
         run: |
           set -e
           if [ "${{ steps.changed-files.outputs.any_changed }}" == "true" ]; then
-            echo "${{ steps.changed-files.outputs.files }}" | while read -r file; do
+            echo "${{ steps.changed-files.outputs.files }}" |
+            while read -r file; do
               if [ -n "$file" ]; then
                 taplo lint "$file"
               fi
@@ -547,20 +611,20 @@ jobs:
 
   yamllint:
     if: ${{ inputs.yamllint_run == true }}
-    name: 'Yamllint - YAML Linter'
+    name: "Yamllint - YAML Linter"
     runs-on: ubuntu-latest
 
     steps:
-      - name: 'Checkout Code'
+      - name: "Checkout Code"
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
         with:
           fetch-depth: 0
 
-      - name: 'Install yamllint'
+      - name: "Install yamllint"
         run: |
           pip3 install yamllint
 
-      - name: 'Get changed YAML files'
+      - name: "Get changed YAML files"
         id: changed-files
         run: |
           git fetch origin main master 2>/dev/null || true
@@ -571,7 +635,10 @@ jobs:
           else
             BASE_REF="HEAD~1"
           fi
-          CHANGED_FILES=$(git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD | grep -E '\.(yml|yaml)$' || true)
+          CHANGED_FILES=$(
+            git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD |
+            grep -E '\.(yml|yaml)$' || true
+          )
           if [ -n "$CHANGED_FILES" ]; then
             {
               echo "files<<EOF"
@@ -583,11 +650,12 @@ jobs:
             echo "any_changed=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: 'Run yamllint'
+      - name: "Run yamllint"
         run: |
           set -e
           if [ "${{ steps.changed-files.outputs.any_changed }}" == "true" ]; then
-            echo "${{ steps.changed-files.outputs.files }}" | while read -r file; do
+            echo "${{ steps.changed-files.outputs.files }}" |
+            while read -r file; do
               if [ -n "$file" ]; then
                 yamllint "$file"
               fi
