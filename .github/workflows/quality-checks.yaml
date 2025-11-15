@@ -90,8 +90,8 @@ jobs:
           DOWNLOAD_URL=$(
             curl -s \
               https://api.github.com/repos/rhysd/actionlint/releases/latest |
-            grep "browser_download_url.*linux_amd64.tar.gz" |
-            cut -d '"' -f 4
+            grep '"browser_download_url".*linux_amd64.tar.gz' |
+            grep -o 'https://[^"]*linux_amd64.tar.gz'
           )
           curl -sSfL "$DOWNLOAD_URL" -o actionlint.tar.gz
           tar -xzf actionlint.tar.gz
