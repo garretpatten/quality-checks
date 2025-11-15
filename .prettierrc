@@ -18,7 +18,7 @@
     {
       "files": "*.yaml,*.yml",
       "options": {
-        "printWidth": 120
+        "printWidth": 80
       }
     }
   ]
