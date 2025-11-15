@@ -221,9 +221,8 @@ jobs:
 
       - name: 'Install Hadolint'
         run: |
-          HADOLINT_URL=\
-            https://github.com/hadolint/hadolint/releases/latest/download/\
-            hadolint-Linux-x86_64
+          HADOLINT_URL="https://github.com/hadolint/hadolint/releases/"\
+            "latest/download/hadolint-Linux-x86_64"
           curl -sSfL "$HADOLINT_URL" -o hadolint
           chmod +x hadolint
           sudo mv hadolint /usr/local/bin/
@@ -572,9 +571,8 @@ jobs:
 
       - name: 'Install Taplo'
         run: |
-          TAPLO_URL=\
-            https://github.com/tamasfe/taplo/releases/latest/download/\
-            taplo-linux-x86_64.gz
+          TAPLO_URL="https://github.com/tamasfe/taplo/releases/"\
+            "latest/download/taplo-linux-x86_64.gz"
           curl -L "$TAPLO_URL" -o taplo.gz
           gunzip taplo.gz
           chmod +x taplo
