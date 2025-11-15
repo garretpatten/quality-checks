@@ -17,6 +17,7 @@ jobs:
           fetch-depth: 0
 
       - name: Trufflehog
+        # yamllint disable-line rule:line-length
         uses: trufflesecurity/trufflehog@58222610ff8ff7a3069d2422276bf28ad52a743f
         with:
           path: ./

@@ -1,55 +1,74 @@
+---
 name: Quality Checks
 
 on:
   workflow_call:
     inputs:
       actionlint_run:
-        description: 'Boolean flag indicating whether the actionlint linter should be executed.'
+        description: >
+          Boolean flag indicating whether the actionlint linter should be
+          executed.
         required: false
         default: true
         type: boolean
       eslint_run:
-        description: 'Boolean flag indicating whether the eslint linter should be executed.'
+        description: >
+          Boolean flag indicating whether the eslint linter should be
+          executed.
         required: false
         default: true
         type: boolean
       hadolint_run:
-        description: 'Boolean flag indicating whether the hadolint linter should be executed.'
+        description: >
+          Boolean flag indicating whether the hadolint linter should be
+          executed.
         required: false
         default: true
         type: boolean
       jq_run:
-        description: 'Boolean flag indicating whether the jq JSON validator should be executed.'
+        description: >
+          Boolean flag indicating whether the jq JSON validator should be
+          executed.
         required: false
         default: true
         type: boolean
       markdownlint_run:
-        description: 'Boolean flag indicating whether the markdownlint-cli2 linter should be executed.'
+        description: >
+          Boolean flag indicating whether the markdownlint-cli2 linter should
+          be executed.
         required: false
         default: true
         type: boolean
       prettier_run:
-        description: 'Boolean flag indicating whether the Prettier formatting check should be executed.'
+        description: >
+          Boolean flag indicating whether the Prettier formatting check should
+          be executed.
         required: false
         default: true
         type: boolean
       ruff_run:
-        description: 'Boolean flag indicating whether the ruff linter should be executed.'
+        description: >
+          Boolean flag indicating whether the ruff linter should be executed.
         required: false
         default: true
         type: boolean
       shellcheck_run:
-        description: 'Boolean flag indicating whether the shellcheck linter should be executed.'
+        description: >
+          Boolean flag indicating whether the shellcheck linter should be
+          executed.
         required: false
         default: true
         type: boolean
       taplo_run:
-        description: 'Boolean flag indicating whether the taplo linter should be executed.'
+        description: >
+          Boolean flag indicating whether the taplo linter should be executed.
         required: false
         default: true
         type: boolean
       yamllint_run:
-        description: 'Boolean flag indicating whether the yamllint linter should be executed.'
+        description: >
+          Boolean flag indicating whether the yamllint linter should be
+          executed.
         required: false
         default: true
         type: boolean
@@ -68,8 +87,16 @@ jobs:
 
       - name: 'Install actionlint'
         run: |
-          curl -sSfL https://raw.githubusercontent.com/rhymond/actionlint/main/scripts/download-actionlint.bash | bash
+          DOWNLOAD_URL=$(
+            curl -s \
+              https://api.github.com/repos/rhysd/actionlint/releases/latest |
+            grep '"browser_download_url".*linux_amd64.tar.gz' |
+            grep -o 'https://[^"]*linux_amd64.tar.gz'
+          )
+          curl -sSfL "$DOWNLOAD_URL" -o actionlint.tar.gz
+          tar -xzf actionlint.tar.gz
           sudo mv actionlint /usr/local/bin/
+          rm actionlint.tar.gz
 
       - name: 'Get changed GitHub Actions files'
         id: changed-files
@@ -82,21 +109,29 @@ jobs:
           else
             BASE_REF="HEAD~1"
           fi
-          CHANGED_FILES=$(git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD | grep -E '\.(yml|yaml)$' | grep -E '\.github/(workflows|actions)' || true)
+          CHANGED_FILES=$(
+            git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD |
+            grep -E '\.(yml|yaml)$' |
+            grep -E '\.github/(workflows|actions)' || true
+          )
           if [ -n "$CHANGED_FILES" ]; then
-            echo "files<<EOF" >> $GITHUB_OUTPUT
-            echo "$CHANGED_FILES" >> $GITHUB_OUTPUT
-            echo "EOF" >> $GITHUB_OUTPUT
-            echo "any_changed=true" >> $GITHUB_OUTPUT
+            {
+              echo "files<<EOF"
+              echo "$CHANGED_FILES"
+              echo "EOF"
+              echo "any_changed=true"
+            } >> "$GITHUB_OUTPUT"
           else
-            echo "any_changed=false" >> $GITHUB_OUTPUT
+            echo "any_changed=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: 'Run actionlint'
         run: |
           set -e
-          if [ "${{ steps.changed-files.outputs.any_changed }}" == "true" ]; then
-            echo "${{ steps.changed-files.outputs.files }}" | while read -r file; do
+          if [ "${{ steps.changed-files.outputs.any_changed }}" == \
+            "true" ]; then
+            echo "${{ steps.changed-files.outputs.files }}" |
+            while read -r file; do
               if [ -n "$file" ]; then
                 actionlint "$file"
               fi
@@ -143,21 +178,28 @@ jobs:
           else
             BASE_REF="HEAD~1"
           fi
-          CHANGED_FILES=$(git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD | grep -E '\.(js|jsx|ts|tsx)$' || true)
+          CHANGED_FILES=$(
+            git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD |
+            grep -E '\.(js|jsx|ts|tsx)$' || true
+          )
           if [ -n "$CHANGED_FILES" ]; then
-            echo "files<<EOF" >> $GITHUB_OUTPUT
-            echo "$CHANGED_FILES" >> $GITHUB_OUTPUT
-            echo "EOF" >> $GITHUB_OUTPUT
-            echo "any_changed=true" >> $GITHUB_OUTPUT
+            {
+              echo "files<<EOF"
+              echo "$CHANGED_FILES"
+              echo "EOF"
+              echo "any_changed=true"
+            } >> "$GITHUB_OUTPUT"
           else
-            echo "any_changed=false" >> $GITHUB_OUTPUT
+            echo "any_changed=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: 'Run ESLint'
         run: |
           set -e
-          if [ "${{ steps.changed-files.outputs.any_changed }}" == "true" ]; then
-            echo "${{ steps.changed-files.outputs.files }}" | while read -r file; do
+          if [ "${{ steps.changed-files.outputs.any_changed }}" == \
+            "true" ]; then
+            echo "${{ steps.changed-files.outputs.files }}" |
+            while read -r file; do
               if [ -n "$file" ]; then
                 npx eslint "$file"
               fi
@@ -179,8 +221,11 @@ jobs:
 
       - name: 'Install Hadolint'
         run: |
-          sudo apt-get update
-          sudo apt-get install -y hadolint
+          # yamllint disable-line rule:line-length
+          HADOLINT_URL="https://github.com/hadolint/hadolint/releases/latest/download/hadolint-Linux-x86_64"
+          curl -sSfL "$HADOLINT_URL" -o hadolint
+          chmod +x hadolint
+          sudo mv hadolint /usr/local/bin/
 
       - name: 'Get changed Dockerfile files'
         id: changed-files
@@ -193,21 +238,28 @@ jobs:
           else
             BASE_REF="HEAD~1"
           fi
-          CHANGED_FILES=$(git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD | grep -iE '(Dockerfile|\.dockerfile)' || true)
+          CHANGED_FILES=$(
+            git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD |
+            grep -iE '(Dockerfile|\.dockerfile)' || true
+          )
           if [ -n "$CHANGED_FILES" ]; then
-            echo "files<<EOF" >> $GITHUB_OUTPUT
-            echo "$CHANGED_FILES" >> $GITHUB_OUTPUT
-            echo "EOF" >> $GITHUB_OUTPUT
-            echo "any_changed=true" >> $GITHUB_OUTPUT
+            {
+              echo "files<<EOF"
+              echo "$CHANGED_FILES"
+              echo "EOF"
+              echo "any_changed=true"
+            } >> "$GITHUB_OUTPUT"
           else
-            echo "any_changed=false" >> $GITHUB_OUTPUT
+            echo "any_changed=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: 'Run Hadolint'
         run: |
           set -e
-          if [ "${{ steps.changed-files.outputs.any_changed }}" == "true" ]; then
-            echo "${{ steps.changed-files.outputs.files }}" | while read -r file; do
+          if [ "${{ steps.changed-files.outputs.any_changed }}" == \
+            "true" ]; then
+            echo "${{ steps.changed-files.outputs.files }}" |
+            while read -r file; do
               if [ -n "$file" ]; then
                 hadolint "$file"
               fi
@@ -243,21 +295,28 @@ jobs:
           else
             BASE_REF="HEAD~1"
           fi
-          CHANGED_FILES=$(git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD | grep -E '\.json$' || true)
+          CHANGED_FILES=$(
+            git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD |
+            grep -E '\.json$' || true
+          )
           if [ -n "$CHANGED_FILES" ]; then
-            echo "files<<EOF" >> $GITHUB_OUTPUT
-            echo "$CHANGED_FILES" >> $GITHUB_OUTPUT
-            echo "EOF" >> $GITHUB_OUTPUT
-            echo "any_changed=true" >> $GITHUB_OUTPUT
+            {
+              echo "files<<EOF"
+              echo "$CHANGED_FILES"
+              echo "EOF"
+              echo "any_changed=true"
+            } >> "$GITHUB_OUTPUT"
           else
-            echo "any_changed=false" >> $GITHUB_OUTPUT
+            echo "any_changed=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: 'Run jq'
         run: |
           set -e
-          if [ "${{ steps.changed-files.outputs.any_changed }}" == "true" ]; then
-            echo "${{ steps.changed-files.outputs.files }}" | while read -r file; do
+          if [ "${{ steps.changed-files.outputs.any_changed }}" == \
+            "true" ]; then
+            echo "${{ steps.changed-files.outputs.files }}" |
+            while read -r file; do
               if [ -n "$file" ]; then
                 jq -e . "$file" > /dev/null
               fi
@@ -296,21 +355,28 @@ jobs:
           else
             BASE_REF="HEAD~1"
           fi
-          CHANGED_FILES=$(git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD | grep -E '\.(md|markdown)$' || true)
+          CHANGED_FILES=$(
+            git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD |
+            grep -E '\.(md|markdown)$' || true
+          )
           if [ -n "$CHANGED_FILES" ]; then
-            echo "files<<EOF" >> $GITHUB_OUTPUT
-            echo "$CHANGED_FILES" >> $GITHUB_OUTPUT
-            echo "EOF" >> $GITHUB_OUTPUT
-            echo "any_changed=true" >> $GITHUB_OUTPUT
+            {
+              echo "files<<EOF"
+              echo "$CHANGED_FILES"
+              echo "EOF"
+              echo "any_changed=true"
+            } >> "$GITHUB_OUTPUT"
           else
-            echo "any_changed=false" >> $GITHUB_OUTPUT
+            echo "any_changed=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: 'Run markdownlint-cli2'
         run: |
           set -e
-          if [ "${{ steps.changed-files.outputs.any_changed }}" == "true" ]; then
-            echo "${{ steps.changed-files.outputs.files }}" | while read -r file; do
+          if [ "${{ steps.changed-files.outputs.any_changed }}" == \
+            "true" ]; then
+            echo "${{ steps.changed-files.outputs.files }}" |
+            while read -r file; do
               if [ -n "$file" ]; then
                 markdownlint-cli2 "$file"
               fi
@@ -349,21 +415,28 @@ jobs:
           else
             BASE_REF="HEAD~1"
           fi
-          CHANGED_FILES=$(git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD | grep -E '\.(js|jsx|ts|tsx|json|css|scss|md|yml|yaml)$' || true)
+          CHANGED_FILES=$(
+            git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD |
+            grep -E '\.(js|jsx|ts|tsx|json|css|scss|md|yml|yaml)$' || true
+          )
           if [ -n "$CHANGED_FILES" ]; then
-            echo "files<<EOF" >> $GITHUB_OUTPUT
-            echo "$CHANGED_FILES" >> $GITHUB_OUTPUT
-            echo "EOF" >> $GITHUB_OUTPUT
-            echo "any_changed=true" >> $GITHUB_OUTPUT
+            {
+              echo "files<<EOF"
+              echo "$CHANGED_FILES"
+              echo "EOF"
+              echo "any_changed=true"
+            } >> "$GITHUB_OUTPUT"
           else
-            echo "any_changed=false" >> $GITHUB_OUTPUT
+            echo "any_changed=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: 'Run Prettier'
         run: |
           set -e
-          if [ "${{ steps.changed-files.outputs.any_changed }}" == "true" ]; then
-            echo "${{ steps.changed-files.outputs.files }}" | while read -r file; do
+          if [ "${{ steps.changed-files.outputs.any_changed }}" == \
+            "true" ]; then
+            echo "${{ steps.changed-files.outputs.files }}" |
+            while read -r file; do
               if [ -n "$file" ]; then
                 prettier --check "$file"
               fi
@@ -398,21 +471,28 @@ jobs:
           else
             BASE_REF="HEAD~1"
           fi
-          CHANGED_FILES=$(git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD | grep -E '\.(py|pyw)$' || true)
+          CHANGED_FILES=$(
+            git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD |
+            grep -E '\.(py|pyw)$' || true
+          )
           if [ -n "$CHANGED_FILES" ]; then
-            echo "files<<EOF" >> $GITHUB_OUTPUT
-            echo "$CHANGED_FILES" >> $GITHUB_OUTPUT
-            echo "EOF" >> $GITHUB_OUTPUT
-            echo "any_changed=true" >> $GITHUB_OUTPUT
+            {
+              echo "files<<EOF"
+              echo "$CHANGED_FILES"
+              echo "EOF"
+              echo "any_changed=true"
+            } >> "$GITHUB_OUTPUT"
           else
-            echo "any_changed=false" >> $GITHUB_OUTPUT
+            echo "any_changed=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: 'Run Ruff'
         run: |
           set -e
-          if [ "${{ steps.changed-files.outputs.any_changed }}" == "true" ]; then
-            echo "${{ steps.changed-files.outputs.files }}" | while read -r file; do
+          if [ "${{ steps.changed-files.outputs.any_changed }}" == \
+            "true" ]; then
+            echo "${{ steps.changed-files.outputs.files }}" |
+            while read -r file; do
               if [ -n "$file" ]; then
                 ruff check "$file"
               fi
@@ -448,21 +528,28 @@ jobs:
           else
             BASE_REF="HEAD~1"
           fi
-          CHANGED_FILES=$(git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD | grep -E '\.(sh|bash|zsh)$' || true)
+          CHANGED_FILES=$(
+            git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD |
+            grep -E '\.(sh|bash|zsh)$' || true
+          )
           if [ -n "$CHANGED_FILES" ]; then
-            echo "files<<EOF" >> $GITHUB_OUTPUT
-            echo "$CHANGED_FILES" >> $GITHUB_OUTPUT
-            echo "EOF" >> $GITHUB_OUTPUT
-            echo "any_changed=true" >> $GITHUB_OUTPUT
+            {
+              echo "files<<EOF"
+              echo "$CHANGED_FILES"
+              echo "EOF"
+              echo "any_changed=true"
+            } >> "$GITHUB_OUTPUT"
           else
-            echo "any_changed=false" >> $GITHUB_OUTPUT
+            echo "any_changed=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: 'Run ShellCheck'
         run: |
           set -e
-          if [ "${{ steps.changed-files.outputs.any_changed }}" == "true" ]; then
-            echo "${{ steps.changed-files.outputs.files }}" | while read -r file; do
+          if [ "${{ steps.changed-files.outputs.any_changed }}" == \
+            "true" ]; then
+            echo "${{ steps.changed-files.outputs.files }}" |
+            while read -r file; do
               if [ -n "$file" ]; then
                 shellcheck "$file"
               fi
@@ -484,7 +571,9 @@ jobs:
 
       - name: 'Install Taplo'
         run: |
-          curl -L https://github.com/tamasfe/taplo/releases/latest/download/taplo-linux-x86_64.gz -o taplo.gz
+          # yamllint disable-line rule:line-length
+          TAPLO_URL="https://github.com/tamasfe/taplo/releases/latest/download/taplo-linux-x86_64.gz"
+          curl -L "$TAPLO_URL" -o taplo.gz
           gunzip taplo.gz
           chmod +x taplo
           sudo mv taplo /usr/local/bin/
@@ -500,21 +589,28 @@ jobs:
           else
             BASE_REF="HEAD~1"
           fi
-          CHANGED_FILES=$(git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD | grep -E '\.(toml)$' || true)
+          CHANGED_FILES=$(
+            git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD |
+            grep -E '\.(toml)$' || true
+          )
           if [ -n "$CHANGED_FILES" ]; then
-            echo "files<<EOF" >> $GITHUB_OUTPUT
-            echo "$CHANGED_FILES" >> $GITHUB_OUTPUT
-            echo "EOF" >> $GITHUB_OUTPUT
-            echo "any_changed=true" >> $GITHUB_OUTPUT
+            {
+              echo "files<<EOF"
+              echo "$CHANGED_FILES"
+              echo "EOF"
+              echo "any_changed=true"
+            } >> "$GITHUB_OUTPUT"
           else
-            echo "any_changed=false" >> $GITHUB_OUTPUT
+            echo "any_changed=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: 'Run Taplo'
         run: |
           set -e
-          if [ "${{ steps.changed-files.outputs.any_changed }}" == "true" ]; then
-            echo "${{ steps.changed-files.outputs.files }}" | while read -r file; do
+          if [ "${{ steps.changed-files.outputs.any_changed }}" == \
+            "true" ]; then
+            echo "${{ steps.changed-files.outputs.files }}" |
+            while read -r file; do
               if [ -n "$file" ]; then
                 taplo lint "$file"
               fi
@@ -549,21 +645,28 @@ jobs:
           else
             BASE_REF="HEAD~1"
           fi
-          CHANGED_FILES=$(git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD | grep -E '\.(yml|yaml)$' || true)
+          CHANGED_FILES=$(
+            git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD |
+            grep -E '\.(yml|yaml)$' || true
+          )
           if [ -n "$CHANGED_FILES" ]; then
-            echo "files<<EOF" >> $GITHUB_OUTPUT
-            echo "$CHANGED_FILES" >> $GITHUB_OUTPUT
-            echo "EOF" >> $GITHUB_OUTPUT
-            echo "any_changed=true" >> $GITHUB_OUTPUT
+            {
+              echo "files<<EOF"
+              echo "$CHANGED_FILES"
+              echo "EOF"
+              echo "any_changed=true"
+            } >> "$GITHUB_OUTPUT"
           else
-            echo "any_changed=false" >> $GITHUB_OUTPUT
+            echo "any_changed=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: 'Run yamllint'
         run: |
           set -e
-          if [ "${{ steps.changed-files.outputs.any_changed }}" == "true" ]; then
-            echo "${{ steps.changed-files.outputs.files }}" | while read -r file; do
+          if [ "${{ steps.changed-files.outputs.any_changed }}" == \
+            "true" ]; then
+            echo "${{ steps.changed-files.outputs.files }}" |
+            while read -r file; do
               if [ -n "$file" ]; then
                 yamllint "$file"
               fi
