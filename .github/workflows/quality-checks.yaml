@@ -9,68 +9,68 @@ on:
           Boolean flag indicating whether the actionlint linter should be
           executed.
         required: false
-        default: true
+        default: false
         type: boolean
       eslint_run:
         description: >
           Boolean flag indicating whether the eslint linter should be
           executed.
         required: false
-        default: true
+        default: false
         type: boolean
       hadolint_run:
         description: >
           Boolean flag indicating whether the hadolint linter should be
           executed.
         required: false
-        default: true
+        default: false
         type: boolean
       jq_run:
         description: >
           Boolean flag indicating whether the jq JSON validator should be
           executed.
         required: false
-        default: true
+        default: false
         type: boolean
       markdownlint_run:
         description: >
           Boolean flag indicating whether the markdownlint-cli2 linter should
           be executed.
         required: false
-        default: true
+        default: false
         type: boolean
       prettier_run:
         description: >
           Boolean flag indicating whether the Prettier formatting check should
           be executed.
         required: false
-        default: true
+        default: false
         type: boolean
       ruff_run:
         description: >
           Boolean flag indicating whether the ruff linter should be executed.
         required: false
-        default: true
+        default: false
         type: boolean
       shellcheck_run:
         description: >
           Boolean flag indicating whether the shellcheck linter should be
           executed.
         required: false
-        default: true
+        default: false
         type: boolean
       taplo_run:
         description: >
           Boolean flag indicating whether the taplo linter should be executed.
         required: false
-        default: true
+        default: false
         type: boolean
       yamllint_run:
         description: >
           Boolean flag indicating whether the yamllint linter should be
           executed.
         required: false
-        default: true
+        default: false
         type: boolean
 
 jobs:

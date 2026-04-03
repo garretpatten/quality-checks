@@ -14,7 +14,7 @@ This repository contains a reusable GitHub Actions workflow that performs qualit
 
 ## Example Consumer Workflow
 
-To use this reusable workflow in your repository, create a workflow file (e.g., `.github/workflows/quality-checks.yml`) that calls it:
+To use this reusable workflow in your repository, create a workflow file (e.g., `.github/workflows/quality-checks.yaml`) that calls it:
 
 ```yaml
 name: 'Quality Checks'
@@ -23,7 +23,7 @@ on: pull_request
 
 jobs:
   quality-checks:
-    uses: garretpatten/quality-checks/.github/workflows/quality-checks.yml@master
+    uses: garretpatten/quality-checks/.github/workflows/quality-checks.yaml@master
     with:
       actionlint_run: true
       eslint_run: true
@@ -40,24 +40,26 @@ jobs:
 
 ## Reusable Workflow Architecture
 
-This repository contains a [reusable workflow](https://docs.github.com/en/actions/using-workflows/reusing-workflows) located at [.github/workflows/quality-checks.yml](.github/workflows/quality-checks.yml). The workflow is designed to perform essential quality checks across projects by running linters on code changes in pull requests.
+This repository contains a [reusable workflow](https://docs.github.com/en/actions/using-workflows/reusing-workflows) located at [.github/workflows/quality-checks.yaml](.github/workflows/quality-checks.yaml). The workflow is designed to perform essential quality checks across projects by running linters on code changes in pull requests.
 
 The workflow checks only the files that have been changed in the pull request, making it efficient and focused on the code being reviewed.
 
 ## Input Parameters
 
+Each linter is **opt-in**: every `*_run` input defaults to `false`, so callers must pass `true` for each tool they want to run (as in the [example](#example-consumer-workflow) above).
+
 | Parameter          | Type    | Required | Default | Description                                            |
 | ------------------ | ------- | -------- | ------- | ------------------------------------------------------ |
-| `actionlint_run`   | boolean | No       | `true`  | Whether to run the Actionlint GitHub Actions linter    |
-| `eslint_run`       | boolean | No       | `true`  | Whether to run the ESLint JavaScript/TypeScript linter |
-| `hadolint_run`     | boolean | No       | `true`  | Whether to run the Hadolint Dockerfile linter          |
-| `jq_run`           | boolean | No       | `true`  | Whether to run the jq JSON validator                   |
-| `markdownlint_run` | boolean | No       | `true`  | Whether to run the Markdownlint Markdown linter        |
-| `prettier_run`     | boolean | No       | `true`  | Whether to run the Prettier code formatter check       |
-| `ruff_run`         | boolean | No       | `true`  | Whether to run the Ruff Python linter                  |
-| `shellcheck_run`   | boolean | No       | `true`  | Whether to run the ShellCheck shell script linter      |
-| `taplo_run`        | boolean | No       | `true`  | Whether to run the Taplo TOML linter                   |
-| `yamllint_run`     | boolean | No       | `true`  | Whether to run the Yamllint YAML linter                |
+| `actionlint_run`   | boolean | No       | `false` | Whether to run the Actionlint GitHub Actions linter    |
+| `eslint_run`       | boolean | No       | `false` | Whether to run the ESLint JavaScript/TypeScript linter |
+| `hadolint_run`     | boolean | No       | `false` | Whether to run the Hadolint Dockerfile linter          |
+| `jq_run`           | boolean | No       | `false` | Whether to run the jq JSON validator                   |
+| `markdownlint_run` | boolean | No       | `false` | Whether to run the Markdownlint Markdown linter        |
+| `prettier_run`     | boolean | No       | `false` | Whether to run the Prettier code formatter check       |
+| `ruff_run`         | boolean | No       | `false` | Whether to run the Ruff Python linter                  |
+| `shellcheck_run`   | boolean | No       | `false` | Whether to run the ShellCheck shell script linter      |
+| `taplo_run`        | boolean | No       | `false` | Whether to run the Taplo TOML linter                   |
+| `yamllint_run`     | boolean | No       | `false` | Whether to run the Yamllint YAML linter                |
 
 ## Supported Linters
 
