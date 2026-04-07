@@ -59,6 +59,13 @@ on:
         required: false
         default: false
         type: boolean
+      stylua_run:
+        description: >
+          Boolean flag indicating whether the StyLua formatter check should be
+          executed.
+        required: false
+        default: false
+        type: boolean
       taplo_run:
         description: >
           Boolean flag indicating whether the taplo linter should be executed.
@@ -557,6 +564,22 @@ jobs:
           else
             echo "No shell files to check"
           fi
+
+  stylua:
+    if: ${{ inputs.stylua_run == true }}
+    name: 'StyLua - Lua Formatter'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 'Checkout Code'
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
+
+      - name: 'Run StyLua'
+        uses: JohnnyMorganz/stylua-action@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          version: v2.4.1
+          args: --check config/nvim
 
   taplo:
     if: ${{ inputs.taplo_run == true }}
