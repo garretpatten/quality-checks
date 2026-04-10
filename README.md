@@ -58,23 +58,23 @@ with:
 
 Each linter is **opt-in**: every `*_run` input defaults to `false`, so callers must pass `true` for each tool they want to run (as in the [example](#example-consumer-workflow) above).
 
-| Parameter          | Type    | Required | Default   | Description |
-| ------------------ | ------- | -------- | --------- | ----------- |
-| `diff_base`        | string  | No       | *(empty)* | Git ref (SHA or branch) to diff against; see above |
-| `node_version`     | string  | No       | `20`      | Node.js version for ESLint, markdownlint-cli2, and Prettier |
+| Parameter          | Type    | Required | Default     | Description                                                           |
+| ------------------ | ------- | -------- | ----------- | --------------------------------------------------------------------- |
+| `diff_base`        | string  | No       | _(empty)_   | Git ref (SHA or branch) to diff against; see above                    |
+| `node_version`     | string  | No       | `20`        | Node.js version for ESLint, markdownlint-cli2, and Prettier           |
 | `stylua_args`      | string  | No       | `--check .` | Arguments passed to [StyLua](https://github.com/JohnnyMorganz/StyLua) |
-| `stylua_version`   | string  | No       | `v2.4.1`  | StyLua release tag for `JohnnyMorganz/stylua-action` |
-| `actionlint_run`   | boolean | No       | `false`   | Whether to run the Actionlint GitHub Actions linter |
-| `eslint_run`       | boolean | No       | `false`   | Whether to run the ESLint JavaScript/TypeScript linter |
-| `hadolint_run`     | boolean | No       | `false`   | Whether to run the Hadolint Dockerfile linter |
-| `jq_run`           | boolean | No       | `false`   | Whether to run the jq JSON validator |
-| `markdownlint_run` | boolean | No       | `false`   | Whether to run the Markdownlint Markdown linter |
-| `prettier_run`     | boolean | No       | `false`   | Whether to run the Prettier code formatter check |
-| `ruff_run`         | boolean | No       | `false`   | Whether to run the Ruff Python linter |
-| `shellcheck_run`   | boolean | No       | `false`   | Whether to run the ShellCheck shell script linter |
-| `stylua_run`       | boolean | No       | `false`   | Whether to run the StyLua Lua formatter check |
-| `taplo_run`        | boolean | No       | `false`   | Whether to run the Taplo TOML linter |
-| `yamllint_run`     | boolean | No       | `false`   | Whether to run the Yamllint YAML linter |
+| `stylua_version`   | string  | No       | `v2.4.1`    | StyLua release tag for `JohnnyMorganz/stylua-action`                  |
+| `actionlint_run`   | boolean | No       | `false`     | Whether to run the Actionlint GitHub Actions linter                   |
+| `eslint_run`       | boolean | No       | `false`     | Whether to run the ESLint JavaScript/TypeScript linter                |
+| `hadolint_run`     | boolean | No       | `false`     | Whether to run the Hadolint Dockerfile linter                         |
+| `jq_run`           | boolean | No       | `false`     | Whether to run the jq JSON validator                                  |
+| `markdownlint_run` | boolean | No       | `false`     | Whether to run the Markdownlint Markdown linter                       |
+| `prettier_run`     | boolean | No       | `false`     | Whether to run the Prettier code formatter check                      |
+| `ruff_run`         | boolean | No       | `false`     | Whether to run the Ruff Python linter                                 |
+| `shellcheck_run`   | boolean | No       | `false`     | Whether to run the ShellCheck shell script linter                     |
+| `stylua_run`       | boolean | No       | `false`     | Whether to run the StyLua Lua formatter check                         |
+| `taplo_run`        | boolean | No       | `false`     | Whether to run the Taplo TOML linter                                  |
+| `yamllint_run`     | boolean | No       | `false`     | Whether to run the Yamllint YAML linter                               |
 
 ## Supported Linters
 
