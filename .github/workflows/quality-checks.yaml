@@ -554,40 +554,23 @@ jobs:
             echo 'No files to check with Prettier'
             exit 0
           fi
-          PRETTIER_IGNORE_ARGS=()
-          if [[ -f .gitignore ]]; then
-            PRETTIER_IGNORE_ARGS+=(
-              --ignore-path "${GITHUB_WORKSPACE}/.gitignore"
-            )
-          fi
-          if [[ -f .prettierignore ]]; then
-            PRETTIER_IGNORE_ARGS+=(
-              --ignore-path "${GITHUB_WORKSPACE}/.prettierignore"
-            )
-          fi
           readarray -t raw < <(
             printf '%s\n' "${{ steps.changed-files.outputs.files }}"
           )
-          to_check=()
+          paths=()
           for file in "${raw[@]}"; do
             [[ -z "${file}" ]] && continue
             [[ -f "${file}" ]] || continue
-            info="$(
-              prettier "${PRETTIER_IGNORE_ARGS[@]}" --file-info "${file}" \
-                2>/dev/null || true
-            )"
-            if echo "${info}" | \
-              grep -qE '"ignored"[[:space:]]*:[[:space:]]*true'; then
-              continue
-            fi
-            to_check+=( "${file}" )
+            paths+=( "${file}" )
           done
-          if [[ ${#to_check[@]} -eq 0 ]]; then
-            echo 'No Prettier-eligible changed files after ignores'
+          if [[ ${#paths[@]} -eq 0 ]]; then
+            echo 'No existing paths to check with Prettier'
             exit 0
           fi
-          prettier "${PRETTIER_IGNORE_ARGS[@]}" \
-            --no-error-on-unmatched-pattern --check "${to_check[@]}"
+          # Default ignore resolution: Prettier loads .prettierignore and
+          # .gitignore from the file path upward (do not pass --ignore-path,
+          # which replaces that default list and is easy to misconfigure).
+          prettier --no-error-on-unmatched-pattern --check "${paths[@]}"
 
   ruff:
     if: ${{ inputs.ruff_run == true }}

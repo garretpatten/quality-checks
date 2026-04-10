@@ -169,14 +169,14 @@ Prettier checks code formatting for the following file types:
 - Markdown (`.md`)
 - YAML (`.yml`, `.yaml`)
 
-The job runs from the repository root and, when present, passes explicit
-`--ignore-path` values for the root `.gitignore` and `.prettierignore` (Prettier
-replaces its default ignore list whenever any `--ignore-path` is set, so both
-are supplied when both files exist). Changed paths that Prettier treats as
-ignored (for example under `node_modules`) are skipped using
-`prettier --file-info`, then the remaining files are checked in a single
-`prettier --check` invocation with `--no-error-on-unmatched-pattern` as a safety
-net. It does not modify files, only reports formatting issues.
+The job runs from the repository root. Prettier uses its normal ignore
+resolution: it discovers `.prettierignore` and `.gitignore` by walking up from
+each file path, so a consuming repo’s root `.prettierignore` (or one in a parent
+of a changed file) applies the same way as when you run Prettier locally.
+Changed paths are checked in one `prettier --check` run with
+`--no-error-on-unmatched-pattern` so paths Prettier excludes (for example under
+`node_modules`) do not fail the job. It does not modify files, only reports
+formatting issues.
 
 ### Ruff
 
