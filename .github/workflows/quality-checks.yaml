@@ -440,12 +440,25 @@ jobs:
       - name: 'Run Prettier'
         run: |
           set -e
+          cd "$GITHUB_WORKSPACE"
+          # Explicit root --ignore-path anchors ignore rules for each file;
+          # Prettier replaces its default ignore list when any --ignore-path is
+          # set, so pass both .gitignore and .prettierignore when they exist.
+          PRETTIER_IGNORE_ARGS=()
+          if [ -f .gitignore ]; then
+            PRETTIER_IGNORE_ARGS+=(--ignore-path "$GITHUB_WORKSPACE/.gitignore")
+          fi
+          if [ -f .prettierignore ]; then
+            PRETTIER_IGNORE_ARGS+=(
+              --ignore-path "$GITHUB_WORKSPACE/.prettierignore"
+            )
+          fi
           if [ "${{ steps.changed-files.outputs.any_changed }}" == \
             "true" ]; then
             echo "${{ steps.changed-files.outputs.files }}" |
             while read -r file; do
-              if [ -n "$file" ]; then
-                prettier --check "$file"
+              if [ -n "$file" ] && [ -f "$file" ]; then
+                prettier "${PRETTIER_IGNORE_ARGS[@]}" --check "$file"
               fi
             done
           else
