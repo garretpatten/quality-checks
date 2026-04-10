@@ -1,9 +1,42 @@
 ---
 name: Quality Checks
 
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
 on:
   workflow_call:
     inputs:
+      diff_base:
+        description: >
+          Git ref to diff against (SHA or branch), e.g.
+          github.event.pull_request.base.sha. When empty, uses origin/main,
+          origin/master, or HEAD~1.
+        required: false
+        default: ''
+        type: string
+      node_version:
+        description: >
+          Node.js version for ESLint, markdownlint-cli2, and Prettier jobs.
+        required: false
+        default: '20'
+        type: string
+      stylua_args:
+        description: >
+          Arguments passed to StyLua (e.g. "--check ." or
+          "--check config/nvim").
+        required: false
+        default: '--check .'
+        type: string
+      stylua_version:
+        description: StyLua release tag for JohnnyMorganz/stylua-action.
+        required: false
+        default: 'v2.4.1'
+        type: string
       actionlint_run:
         description: >
           Boolean flag indicating whether the actionlint linter should be
@@ -80,6 +113,9 @@ on:
         default: false
         type: boolean
 
+env:
+  QC_DIFF_BASE: ${{ inputs.diff_base }}
+
 jobs:
   actionlint:
     if: ${{ inputs.actionlint_run == true }}
@@ -93,59 +129,73 @@ jobs:
           fetch-depth: 0
 
       - name: 'Install actionlint'
+        env:
+          # Pin release; bump intentionally when upgrading.
+          ACTIONLINT_VERSION: v1.7.7
         run: |
-          DOWNLOAD_URL=$(
-            curl -s \
-              https://api.github.com/repos/rhysd/actionlint/releases/latest |
-            grep '"browser_download_url".*linux_amd64.tar.gz' |
-            grep -o 'https://[^"]*linux_amd64.tar.gz'
-          )
-          curl -sSfL "$DOWNLOAD_URL" -o actionlint.tar.gz
-          tar -xzf actionlint.tar.gz
+          set -euo pipefail
+          tag="${ACTIONLINT_VERSION#v}"
+          url="https://github.com/rhysd/actionlint/releases/download/${ACTIONLINT_VERSION}/actionlint_${tag}_linux_amd64.tar.gz"
+          curl -fsSL "$url" -o actionlint.tar.gz
+          tar -xzf actionlint.tar.gz actionlint
           sudo mv actionlint /usr/local/bin/
           rm actionlint.tar.gz
 
       - name: 'Get changed GitHub Actions files'
         id: changed-files
         run: |
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
           git fetch origin main master 2>/dev/null || true
-          if git show-ref --verify --quiet refs/remotes/origin/main; then
+          if [[ -n "${QC_DIFF_BASE}" ]]; then
+            BASE_REF="${QC_DIFF_BASE}"
+          elif git show-ref --verify --quiet refs/remotes/origin/main; then
             BASE_REF="origin/main"
           elif git show-ref --verify --quiet refs/remotes/origin/master; then
             BASE_REF="origin/master"
           else
             BASE_REF="HEAD~1"
           fi
-          CHANGED_FILES=$(
-            git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD |
-            grep -E '\.(yml|yaml)$' |
-            grep -E '\.github/(workflows|actions)' || true
+          mapfile -t CHANGED_FILES < <(
+            git diff --name-only --diff-filter=ACMR "${BASE_REF}"...HEAD |
+              grep -E '\.(yml|yaml)$' |
+              grep -E '\.github/(workflows|actions)/' || true
           )
-          if [ -n "$CHANGED_FILES" ]; then
+          if [[ ${#CHANGED_FILES[@]} -gt 0 ]] && \
+            [[ -n "${CHANGED_FILES[0]}" ]]; then
             {
-              echo "files<<EOF"
-              echo "$CHANGED_FILES"
-              echo "EOF"
-              echo "any_changed=true"
+              printf 'files<<EOF\n'
+              printf '%s\n' "${CHANGED_FILES[@]}"
+              printf 'EOF\n'
+              echo 'any_changed=true'
             } >> "$GITHUB_OUTPUT"
           else
-            echo "any_changed=false" >> "$GITHUB_OUTPUT"
+            echo 'any_changed=false' >> "$GITHUB_OUTPUT"
           fi
 
       - name: 'Run actionlint'
         run: |
-          set -e
-          if [ "${{ steps.changed-files.outputs.any_changed }}" == \
-            "true" ]; then
-            echo "${{ steps.changed-files.outputs.files }}" |
-            while read -r file; do
-              if [ -n "$file" ]; then
-                actionlint "$file"
-              fi
-            done
-          else
-            echo "No GitHub Actions files to check"
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
+          if [[ "${{ steps.changed-files.outputs.any_changed }}" != \
+            "true" ]]; then
+            echo 'No GitHub Actions files to check'
+            exit 0
           fi
+          readarray -t raw < <(
+            printf '%s\n' "${{ steps.changed-files.outputs.files }}"
+          )
+          paths=()
+          for file in "${raw[@]}"; do
+            [[ -z "${file}" ]] && continue
+            [[ -f "${file}" ]] || continue
+            paths+=( "${file}" )
+          done
+          if [[ ${#paths[@]} -eq 0 ]]; then
+            echo 'No existing paths to lint'
+            exit 0
+          fi
+          actionlint "${paths[@]}"
 
   eslint:
     if: ${{ inputs.eslint_run == true }}
@@ -161,59 +211,76 @@ jobs:
       - name: 'Setup Node.js'
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: ${{ inputs.node_version }}
 
       - name: 'Install dependencies'
         run: |
-          if [ -f package.json ]; then
+          set -euo pipefail
+          if [[ -f package.json ]]; then
             npm ci
           else
-            echo "No package.json found, skipping dependency installation"
+            echo 'No package.json found, skipping dependency installation'
           fi
 
       - name: 'Install ESLint'
-        run: npm install -g eslint
+        run: |
+          set -euo pipefail
+          npm install -g eslint
 
       - name: 'Get changed JavaScript/TypeScript files'
         id: changed-files
         run: |
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
           git fetch origin main master 2>/dev/null || true
-          if git show-ref --verify --quiet refs/remotes/origin/main; then
+          if [[ -n "${QC_DIFF_BASE}" ]]; then
+            BASE_REF="${QC_DIFF_BASE}"
+          elif git show-ref --verify --quiet refs/remotes/origin/main; then
             BASE_REF="origin/main"
           elif git show-ref --verify --quiet refs/remotes/origin/master; then
             BASE_REF="origin/master"
           else
             BASE_REF="HEAD~1"
           fi
-          CHANGED_FILES=$(
-            git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD |
-            grep -E '\.(js|jsx|ts|tsx)$' || true
+          mapfile -t CHANGED_FILES < <(
+            git diff --name-only --diff-filter=ACMR "${BASE_REF}"...HEAD |
+              grep -E '\.(js|jsx|ts|tsx)$' || true
           )
-          if [ -n "$CHANGED_FILES" ]; then
+          if [[ ${#CHANGED_FILES[@]} -gt 0 ]] && \
+            [[ -n "${CHANGED_FILES[0]}" ]]; then
             {
-              echo "files<<EOF"
-              echo "$CHANGED_FILES"
-              echo "EOF"
-              echo "any_changed=true"
+              printf 'files<<EOF\n'
+              printf '%s\n' "${CHANGED_FILES[@]}"
+              printf 'EOF\n'
+              echo 'any_changed=true'
             } >> "$GITHUB_OUTPUT"
           else
-            echo "any_changed=false" >> "$GITHUB_OUTPUT"
+            echo 'any_changed=false' >> "$GITHUB_OUTPUT"
           fi
 
       - name: 'Run ESLint'
         run: |
-          set -e
-          if [ "${{ steps.changed-files.outputs.any_changed }}" == \
-            "true" ]; then
-            echo "${{ steps.changed-files.outputs.files }}" |
-            while read -r file; do
-              if [ -n "$file" ]; then
-                npx eslint "$file"
-              fi
-            done
-          else
-            echo "No JavaScript/TypeScript files to check"
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
+          if [[ "${{ steps.changed-files.outputs.any_changed }}" != \
+            "true" ]]; then
+            echo 'No JavaScript/TypeScript files to check'
+            exit 0
           fi
+          readarray -t raw < <(
+            printf '%s\n' "${{ steps.changed-files.outputs.files }}"
+          )
+          paths=()
+          for file in "${raw[@]}"; do
+            [[ -z "${file}" ]] && continue
+            [[ -f "${file}" ]] || continue
+            paths+=( "${file}" )
+          done
+          if [[ ${#paths[@]} -eq 0 ]]; then
+            echo 'No existing paths to lint'
+            exit 0
+          fi
+          npx eslint "${paths[@]}"
 
   hadolint:
     if: ${{ inputs.hadolint_run == true }}
@@ -228,52 +295,66 @@ jobs:
 
       - name: 'Install Hadolint'
         run: |
-          # yamllint disable-line rule:line-length
+          set -euo pipefail
           HADOLINT_URL="https://github.com/hadolint/hadolint/releases/latest/download/hadolint-Linux-x86_64"
-          curl -sSfL "$HADOLINT_URL" -o hadolint
+          curl -fsSL "${HADOLINT_URL}" -o hadolint
           chmod +x hadolint
           sudo mv hadolint /usr/local/bin/
 
       - name: 'Get changed Dockerfile files'
         id: changed-files
         run: |
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
           git fetch origin main master 2>/dev/null || true
-          if git show-ref --verify --quiet refs/remotes/origin/main; then
+          if [[ -n "${QC_DIFF_BASE}" ]]; then
+            BASE_REF="${QC_DIFF_BASE}"
+          elif git show-ref --verify --quiet refs/remotes/origin/main; then
             BASE_REF="origin/main"
           elif git show-ref --verify --quiet refs/remotes/origin/master; then
             BASE_REF="origin/master"
           else
             BASE_REF="HEAD~1"
           fi
-          CHANGED_FILES=$(
-            git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD |
-            grep -iE '(Dockerfile|\.dockerfile)' || true
+          mapfile -t CHANGED_FILES < <(
+            git diff --name-only --diff-filter=ACMR "${BASE_REF}"...HEAD |
+              grep -iE '(Dockerfile|\.dockerfile)' || true
           )
-          if [ -n "$CHANGED_FILES" ]; then
+          if [[ ${#CHANGED_FILES[@]} -gt 0 ]] && \
+            [[ -n "${CHANGED_FILES[0]}" ]]; then
             {
-              echo "files<<EOF"
-              echo "$CHANGED_FILES"
-              echo "EOF"
-              echo "any_changed=true"
+              printf 'files<<EOF\n'
+              printf '%s\n' "${CHANGED_FILES[@]}"
+              printf 'EOF\n'
+              echo 'any_changed=true'
             } >> "$GITHUB_OUTPUT"
           else
-            echo "any_changed=false" >> "$GITHUB_OUTPUT"
+            echo 'any_changed=false' >> "$GITHUB_OUTPUT"
           fi
 
       - name: 'Run Hadolint'
         run: |
-          set -e
-          if [ "${{ steps.changed-files.outputs.any_changed }}" == \
-            "true" ]; then
-            echo "${{ steps.changed-files.outputs.files }}" |
-            while read -r file; do
-              if [ -n "$file" ]; then
-                hadolint "$file"
-              fi
-            done
-          else
-            echo "No Dockerfile files to check"
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
+          if [[ "${{ steps.changed-files.outputs.any_changed }}" != \
+            "true" ]]; then
+            echo 'No Dockerfile files to check'
+            exit 0
           fi
+          readarray -t raw < <(
+            printf '%s\n' "${{ steps.changed-files.outputs.files }}"
+          )
+          paths=()
+          for file in "${raw[@]}"; do
+            [[ -z "${file}" ]] && continue
+            [[ -f "${file}" ]] || continue
+            paths+=( "${file}" )
+          done
+          if [[ ${#paths[@]} -eq 0 ]]; then
+            echo 'No existing paths to lint'
+            exit 0
+          fi
+          hadolint "${paths[@]}"
 
   jq:
     if: ${{ inputs.jq_run == true }}
@@ -286,51 +367,54 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: 'Install jq'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y jq
-
       - name: 'Get changed JSON files'
         id: changed-files
         run: |
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
           git fetch origin main master 2>/dev/null || true
-          if git show-ref --verify --quiet refs/remotes/origin/main; then
+          if [[ -n "${QC_DIFF_BASE}" ]]; then
+            BASE_REF="${QC_DIFF_BASE}"
+          elif git show-ref --verify --quiet refs/remotes/origin/main; then
             BASE_REF="origin/main"
           elif git show-ref --verify --quiet refs/remotes/origin/master; then
             BASE_REF="origin/master"
           else
             BASE_REF="HEAD~1"
           fi
-          CHANGED_FILES=$(
-            git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD |
-            grep -E '\.json$' || true
+          mapfile -t CHANGED_FILES < <(
+            git diff --name-only --diff-filter=ACMR "${BASE_REF}"...HEAD |
+              grep -E '\.json$' || true
           )
-          if [ -n "$CHANGED_FILES" ]; then
+          if [[ ${#CHANGED_FILES[@]} -gt 0 ]] && \
+            [[ -n "${CHANGED_FILES[0]}" ]]; then
             {
-              echo "files<<EOF"
-              echo "$CHANGED_FILES"
-              echo "EOF"
-              echo "any_changed=true"
+              printf 'files<<EOF\n'
+              printf '%s\n' "${CHANGED_FILES[@]}"
+              printf 'EOF\n'
+              echo 'any_changed=true'
             } >> "$GITHUB_OUTPUT"
           else
-            echo "any_changed=false" >> "$GITHUB_OUTPUT"
+            echo 'any_changed=false' >> "$GITHUB_OUTPUT"
           fi
 
       - name: 'Run jq'
         run: |
-          set -e
-          if [ "${{ steps.changed-files.outputs.any_changed }}" == \
-            "true" ]; then
-            echo "${{ steps.changed-files.outputs.files }}" |
-            while read -r file; do
-              if [ -n "$file" ]; then
-                jq -e . "$file" > /dev/null
-              fi
-            done
-          else
-            echo "No JSON files to check"
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
+          if [[ "${{ steps.changed-files.outputs.any_changed }}" != \
+            "true" ]]; then
+            echo 'No JSON files to check'
+            exit 0
           fi
+          readarray -t raw < <(
+            printf '%s\n' "${{ steps.changed-files.outputs.files }}"
+          )
+          for file in "${raw[@]}"; do
+            [[ -z "${file}" ]] && continue
+            [[ -f "${file}" ]] || continue
+            jq -e . "${file}" >/dev/null
+          done
 
   markdownlint:
     if: ${{ inputs.markdownlint_run == true }}
@@ -346,51 +430,67 @@ jobs:
       - name: 'Setup Node.js'
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: ${{ inputs.node_version }}
 
       - name: 'Install markdownlint-cli2'
-        run: npm install -g markdownlint-cli2
+        run: |
+          set -euo pipefail
+          npm install -g markdownlint-cli2
 
       - name: 'Get changed Markdown files'
         id: changed-files
         run: |
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
           git fetch origin main master 2>/dev/null || true
-          if git show-ref --verify --quiet refs/remotes/origin/main; then
+          if [[ -n "${QC_DIFF_BASE}" ]]; then
+            BASE_REF="${QC_DIFF_BASE}"
+          elif git show-ref --verify --quiet refs/remotes/origin/main; then
             BASE_REF="origin/main"
           elif git show-ref --verify --quiet refs/remotes/origin/master; then
             BASE_REF="origin/master"
           else
             BASE_REF="HEAD~1"
           fi
-          CHANGED_FILES=$(
-            git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD |
-            grep -E '\.(md|markdown)$' || true
+          mapfile -t CHANGED_FILES < <(
+            git diff --name-only --diff-filter=ACMR "${BASE_REF}"...HEAD |
+              grep -E '\.(md|markdown)$' || true
           )
-          if [ -n "$CHANGED_FILES" ]; then
+          if [[ ${#CHANGED_FILES[@]} -gt 0 ]] && \
+            [[ -n "${CHANGED_FILES[0]}" ]]; then
             {
-              echo "files<<EOF"
-              echo "$CHANGED_FILES"
-              echo "EOF"
-              echo "any_changed=true"
+              printf 'files<<EOF\n'
+              printf '%s\n' "${CHANGED_FILES[@]}"
+              printf 'EOF\n'
+              echo 'any_changed=true'
             } >> "$GITHUB_OUTPUT"
           else
-            echo "any_changed=false" >> "$GITHUB_OUTPUT"
+            echo 'any_changed=false' >> "$GITHUB_OUTPUT"
           fi
 
       - name: 'Run markdownlint-cli2'
         run: |
-          set -e
-          if [ "${{ steps.changed-files.outputs.any_changed }}" == \
-            "true" ]; then
-            echo "${{ steps.changed-files.outputs.files }}" |
-            while read -r file; do
-              if [ -n "$file" ]; then
-                markdownlint-cli2 "$file"
-              fi
-            done
-          else
-            echo "No Markdown files to check"
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
+          if [[ "${{ steps.changed-files.outputs.any_changed }}" != \
+            "true" ]]; then
+            echo 'No Markdown files to check'
+            exit 0
           fi
+          readarray -t raw < <(
+            printf '%s\n' "${{ steps.changed-files.outputs.files }}"
+          )
+          paths=()
+          for file in "${raw[@]}"; do
+            [[ -z "${file}" ]] && continue
+            [[ -f "${file}" ]] || continue
+            paths+=( "${file}" )
+          done
+          if [[ ${#paths[@]} -eq 0 ]]; then
+            echo 'No existing paths to lint'
+            exit 0
+          fi
+          markdownlint-cli2 "${paths[@]}"
 
   prettier:
     if: ${{ inputs.prettier_run == true }}
@@ -406,64 +506,88 @@ jobs:
       - name: 'Setup Node.js'
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: ${{ inputs.node_version }}
 
       - name: 'Install Prettier'
-        run: npm install -g prettier
+        run: |
+          set -euo pipefail
+          npm install -g prettier
 
       - name: 'Get changed files'
         id: changed-files
         run: |
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
           git fetch origin main master 2>/dev/null || true
-          if git show-ref --verify --quiet refs/remotes/origin/main; then
+          if [[ -n "${QC_DIFF_BASE}" ]]; then
+            BASE_REF="${QC_DIFF_BASE}"
+          elif git show-ref --verify --quiet refs/remotes/origin/main; then
             BASE_REF="origin/main"
           elif git show-ref --verify --quiet refs/remotes/origin/master; then
             BASE_REF="origin/master"
           else
             BASE_REF="HEAD~1"
           fi
-          CHANGED_FILES=$(
-            git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD |
-            grep -E '\.(js|jsx|ts|tsx|json|css|scss|md|yml|yaml)$' || true
+          mapfile -t CHANGED_FILES < <(
+            git diff --name-only --diff-filter=ACMR "${BASE_REF}"...HEAD |
+              grep -E \
+                '\.(js|jsx|ts|tsx|json|css|scss|md|yml|yaml)$' || true
           )
-          if [ -n "$CHANGED_FILES" ]; then
+          if [[ ${#CHANGED_FILES[@]} -gt 0 ]] && \
+            [[ -n "${CHANGED_FILES[0]}" ]]; then
             {
-              echo "files<<EOF"
-              echo "$CHANGED_FILES"
-              echo "EOF"
-              echo "any_changed=true"
+              printf 'files<<EOF\n'
+              printf '%s\n' "${CHANGED_FILES[@]}"
+              printf 'EOF\n'
+              echo 'any_changed=true'
             } >> "$GITHUB_OUTPUT"
           else
-            echo "any_changed=false" >> "$GITHUB_OUTPUT"
+            echo 'any_changed=false' >> "$GITHUB_OUTPUT"
           fi
 
       - name: 'Run Prettier'
         run: |
-          set -e
+          set -euo pipefail
           cd "$GITHUB_WORKSPACE"
-          # Explicit root --ignore-path anchors ignore rules for each file;
-          # Prettier replaces its default ignore list when any --ignore-path is
-          # set, so pass both .gitignore and .prettierignore when they exist.
-          PRETTIER_IGNORE_ARGS=()
-          if [ -f .gitignore ]; then
-            PRETTIER_IGNORE_ARGS+=(--ignore-path "$GITHUB_WORKSPACE/.gitignore")
+          if [[ "${{ steps.changed-files.outputs.any_changed }}" != \
+            "true" ]]; then
+            echo 'No files to check with Prettier'
+            exit 0
           fi
-          if [ -f .prettierignore ]; then
+          PRETTIER_IGNORE_ARGS=()
+          if [[ -f .gitignore ]]; then
             PRETTIER_IGNORE_ARGS+=(
-              --ignore-path "$GITHUB_WORKSPACE/.prettierignore"
+              --ignore-path "${GITHUB_WORKSPACE}/.gitignore"
             )
           fi
-          if [ "${{ steps.changed-files.outputs.any_changed }}" == \
-            "true" ]; then
-            echo "${{ steps.changed-files.outputs.files }}" |
-            while read -r file; do
-              if [ -n "$file" ] && [ -f "$file" ]; then
-                prettier "${PRETTIER_IGNORE_ARGS[@]}" --check "$file"
-              fi
-            done
-          else
-            echo "No files to check with Prettier"
+          if [[ -f .prettierignore ]]; then
+            PRETTIER_IGNORE_ARGS+=(
+              --ignore-path "${GITHUB_WORKSPACE}/.prettierignore"
+            )
           fi
+          readarray -t raw < <(
+            printf '%s\n' "${{ steps.changed-files.outputs.files }}"
+          )
+          to_check=()
+          for file in "${raw[@]}"; do
+            [[ -z "${file}" ]] && continue
+            [[ -f "${file}" ]] || continue
+            info="$(
+              prettier "${PRETTIER_IGNORE_ARGS[@]}" --file-info "${file}" \
+                2>/dev/null || true
+            )"
+            if echo "${info}" | \
+              grep -qE '"ignored"[[:space:]]*:[[:space:]]*true'; then
+              continue
+            fi
+            to_check+=( "${file}" )
+          done
+          if [[ ${#to_check[@]} -eq 0 ]]; then
+            echo 'No Prettier-eligible changed files after ignores'
+            exit 0
+          fi
+          prettier "${PRETTIER_IGNORE_ARGS[@]}" \
+            --no-error-on-unmatched-pattern --check "${to_check[@]}"
 
   ruff:
     if: ${{ inputs.ruff_run == true }}
@@ -478,48 +602,63 @@ jobs:
 
       - name: 'Install Ruff'
         run: |
+          set -euo pipefail
           pip3 install ruff
 
       - name: 'Get changed Python files'
         id: changed-files
         run: |
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
           git fetch origin main master 2>/dev/null || true
-          if git show-ref --verify --quiet refs/remotes/origin/main; then
+          if [[ -n "${QC_DIFF_BASE}" ]]; then
+            BASE_REF="${QC_DIFF_BASE}"
+          elif git show-ref --verify --quiet refs/remotes/origin/main; then
             BASE_REF="origin/main"
           elif git show-ref --verify --quiet refs/remotes/origin/master; then
             BASE_REF="origin/master"
           else
             BASE_REF="HEAD~1"
           fi
-          CHANGED_FILES=$(
-            git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD |
-            grep -E '\.(py|pyw)$' || true
+          mapfile -t CHANGED_FILES < <(
+            git diff --name-only --diff-filter=ACMR "${BASE_REF}"...HEAD |
+              grep -E '\.(py|pyw)$' || true
           )
-          if [ -n "$CHANGED_FILES" ]; then
+          if [[ ${#CHANGED_FILES[@]} -gt 0 ]] && \
+            [[ -n "${CHANGED_FILES[0]}" ]]; then
             {
-              echo "files<<EOF"
-              echo "$CHANGED_FILES"
-              echo "EOF"
-              echo "any_changed=true"
+              printf 'files<<EOF\n'
+              printf '%s\n' "${CHANGED_FILES[@]}"
+              printf 'EOF\n'
+              echo 'any_changed=true'
             } >> "$GITHUB_OUTPUT"
           else
-            echo "any_changed=false" >> "$GITHUB_OUTPUT"
+            echo 'any_changed=false' >> "$GITHUB_OUTPUT"
           fi
 
       - name: 'Run Ruff'
         run: |
-          set -e
-          if [ "${{ steps.changed-files.outputs.any_changed }}" == \
-            "true" ]; then
-            echo "${{ steps.changed-files.outputs.files }}" |
-            while read -r file; do
-              if [ -n "$file" ]; then
-                ruff check "$file"
-              fi
-            done
-          else
-            echo "No Python files to check"
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
+          if [[ "${{ steps.changed-files.outputs.any_changed }}" != \
+            "true" ]]; then
+            echo 'No Python files to check'
+            exit 0
           fi
+          readarray -t raw < <(
+            printf '%s\n' "${{ steps.changed-files.outputs.files }}"
+          )
+          paths=()
+          for file in "${raw[@]}"; do
+            [[ -z "${file}" ]] && continue
+            [[ -f "${file}" ]] || continue
+            paths+=( "${file}" )
+          done
+          if [[ ${#paths[@]} -eq 0 ]]; then
+            echo 'No existing paths to lint'
+            exit 0
+          fi
+          ruff check "${paths[@]}"
 
   shellcheck:
     if: ${{ inputs.shellcheck_run == true }}
@@ -532,51 +671,60 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: 'Install ShellCheck'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y shellcheck
-
       - name: 'Get changed shell files'
         id: changed-files
         run: |
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
           git fetch origin main master 2>/dev/null || true
-          if git show-ref --verify --quiet refs/remotes/origin/main; then
+          if [[ -n "${QC_DIFF_BASE}" ]]; then
+            BASE_REF="${QC_DIFF_BASE}"
+          elif git show-ref --verify --quiet refs/remotes/origin/main; then
             BASE_REF="origin/main"
           elif git show-ref --verify --quiet refs/remotes/origin/master; then
             BASE_REF="origin/master"
           else
             BASE_REF="HEAD~1"
           fi
-          CHANGED_FILES=$(
-            git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD |
-            grep -E '\.(sh|bash|zsh)$' || true
+          mapfile -t CHANGED_FILES < <(
+            git diff --name-only --diff-filter=ACMR "${BASE_REF}"...HEAD |
+              grep -E '\.(sh|bash|zsh)$' || true
           )
-          if [ -n "$CHANGED_FILES" ]; then
+          if [[ ${#CHANGED_FILES[@]} -gt 0 ]] && \
+            [[ -n "${CHANGED_FILES[0]}" ]]; then
             {
-              echo "files<<EOF"
-              echo "$CHANGED_FILES"
-              echo "EOF"
-              echo "any_changed=true"
+              printf 'files<<EOF\n'
+              printf '%s\n' "${CHANGED_FILES[@]}"
+              printf 'EOF\n'
+              echo 'any_changed=true'
             } >> "$GITHUB_OUTPUT"
           else
-            echo "any_changed=false" >> "$GITHUB_OUTPUT"
+            echo 'any_changed=false' >> "$GITHUB_OUTPUT"
           fi
 
       - name: 'Run ShellCheck'
         run: |
-          set -e
-          if [ "${{ steps.changed-files.outputs.any_changed }}" == \
-            "true" ]; then
-            echo "${{ steps.changed-files.outputs.files }}" |
-            while read -r file; do
-              if [ -n "$file" ]; then
-                shellcheck "$file"
-              fi
-            done
-          else
-            echo "No shell files to check"
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
+          if [[ "${{ steps.changed-files.outputs.any_changed }}" != \
+            "true" ]]; then
+            echo 'No shell files to check'
+            exit 0
           fi
+          readarray -t raw < <(
+            printf '%s\n' "${{ steps.changed-files.outputs.files }}"
+          )
+          paths=()
+          for file in "${raw[@]}"; do
+            [[ -z "${file}" ]] && continue
+            [[ -f "${file}" ]] || continue
+            paths+=( "${file}" )
+          done
+          if [[ ${#paths[@]} -eq 0 ]]; then
+            echo 'No existing paths to lint'
+            exit 0
+          fi
+          shellcheck "${paths[@]}"
 
   stylua:
     if: ${{ inputs.stylua_run == true }}
@@ -591,8 +739,8 @@ jobs:
         uses: JohnnyMorganz/stylua-action@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          version: v2.4.1
-          args: --check config/nvim
+          version: ${{ inputs.stylua_version }}
+          args: ${{ inputs.stylua_args }}
 
   taplo:
     if: ${{ inputs.taplo_run == true }}
@@ -607,53 +755,67 @@ jobs:
 
       - name: 'Install Taplo'
         run: |
-          # yamllint disable-line rule:line-length
+          set -euo pipefail
           TAPLO_URL="https://github.com/tamasfe/taplo/releases/latest/download/taplo-linux-x86_64.gz"
-          curl -L "$TAPLO_URL" -o taplo.gz
-          gunzip taplo.gz
+          curl -fsSL "${TAPLO_URL}" -o taplo.gz
+          gunzip -f taplo.gz
           chmod +x taplo
           sudo mv taplo /usr/local/bin/
 
       - name: 'Get changed TOML files'
         id: changed-files
         run: |
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
           git fetch origin main master 2>/dev/null || true
-          if git show-ref --verify --quiet refs/remotes/origin/main; then
+          if [[ -n "${QC_DIFF_BASE}" ]]; then
+            BASE_REF="${QC_DIFF_BASE}"
+          elif git show-ref --verify --quiet refs/remotes/origin/main; then
             BASE_REF="origin/main"
           elif git show-ref --verify --quiet refs/remotes/origin/master; then
             BASE_REF="origin/master"
           else
             BASE_REF="HEAD~1"
           fi
-          CHANGED_FILES=$(
-            git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD |
-            grep -E '\.(toml)$' || true
+          mapfile -t CHANGED_FILES < <(
+            git diff --name-only --diff-filter=ACMR "${BASE_REF}"...HEAD |
+              grep -E '\.toml$' || true
           )
-          if [ -n "$CHANGED_FILES" ]; then
+          if [[ ${#CHANGED_FILES[@]} -gt 0 ]] && \
+            [[ -n "${CHANGED_FILES[0]}" ]]; then
             {
-              echo "files<<EOF"
-              echo "$CHANGED_FILES"
-              echo "EOF"
-              echo "any_changed=true"
+              printf 'files<<EOF\n'
+              printf '%s\n' "${CHANGED_FILES[@]}"
+              printf 'EOF\n'
+              echo 'any_changed=true'
             } >> "$GITHUB_OUTPUT"
           else
-            echo "any_changed=false" >> "$GITHUB_OUTPUT"
+            echo 'any_changed=false' >> "$GITHUB_OUTPUT"
           fi
 
       - name: 'Run Taplo'
         run: |
-          set -e
-          if [ "${{ steps.changed-files.outputs.any_changed }}" == \
-            "true" ]; then
-            echo "${{ steps.changed-files.outputs.files }}" |
-            while read -r file; do
-              if [ -n "$file" ]; then
-                taplo lint "$file"
-              fi
-            done
-          else
-            echo "No TOML files to check"
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
+          if [[ "${{ steps.changed-files.outputs.any_changed }}" != \
+            "true" ]]; then
+            echo 'No TOML files to check'
+            exit 0
           fi
+          readarray -t raw < <(
+            printf '%s\n' "${{ steps.changed-files.outputs.files }}"
+          )
+          paths=()
+          for file in "${raw[@]}"; do
+            [[ -z "${file}" ]] && continue
+            [[ -f "${file}" ]] || continue
+            paths+=( "${file}" )
+          done
+          if [[ ${#paths[@]} -eq 0 ]]; then
+            echo 'No existing paths to lint'
+            exit 0
+          fi
+          taplo lint "${paths[@]}"
 
   yamllint:
     if: ${{ inputs.yamllint_run == true }}
@@ -668,45 +830,60 @@ jobs:
 
       - name: 'Install yamllint'
         run: |
+          set -euo pipefail
           pip3 install yamllint
 
       - name: 'Get changed YAML files'
         id: changed-files
         run: |
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
           git fetch origin main master 2>/dev/null || true
-          if git show-ref --verify --quiet refs/remotes/origin/main; then
+          if [[ -n "${QC_DIFF_BASE}" ]]; then
+            BASE_REF="${QC_DIFF_BASE}"
+          elif git show-ref --verify --quiet refs/remotes/origin/main; then
             BASE_REF="origin/main"
           elif git show-ref --verify --quiet refs/remotes/origin/master; then
             BASE_REF="origin/master"
           else
             BASE_REF="HEAD~1"
           fi
-          CHANGED_FILES=$(
-            git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD |
-            grep -E '\.(yml|yaml)$' || true
+          mapfile -t CHANGED_FILES < <(
+            git diff --name-only --diff-filter=ACMR "${BASE_REF}"...HEAD |
+              grep -E '\.(yml|yaml)$' || true
           )
-          if [ -n "$CHANGED_FILES" ]; then
+          if [[ ${#CHANGED_FILES[@]} -gt 0 ]] && \
+            [[ -n "${CHANGED_FILES[0]}" ]]; then
             {
-              echo "files<<EOF"
-              echo "$CHANGED_FILES"
-              echo "EOF"
-              echo "any_changed=true"
+              printf 'files<<EOF\n'
+              printf '%s\n' "${CHANGED_FILES[@]}"
+              printf 'EOF\n'
+              echo 'any_changed=true'
             } >> "$GITHUB_OUTPUT"
           else
-            echo "any_changed=false" >> "$GITHUB_OUTPUT"
+            echo 'any_changed=false' >> "$GITHUB_OUTPUT"
           fi
 
       - name: 'Run yamllint'
         run: |
-          set -e
-          if [ "${{ steps.changed-files.outputs.any_changed }}" == \
-            "true" ]; then
-            echo "${{ steps.changed-files.outputs.files }}" |
-            while read -r file; do
-              if [ -n "$file" ]; then
-                yamllint "$file"
-              fi
-            done
-          else
-            echo "No YAML files to check"
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
+          if [[ "${{ steps.changed-files.outputs.any_changed }}" != \
+            "true" ]]; then
+            echo 'No YAML files to check'
+            exit 0
           fi
+          readarray -t raw < <(
+            printf '%s\n' "${{ steps.changed-files.outputs.files }}"
+          )
+          paths=()
+          for file in "${raw[@]}"; do
+            [[ -z "${file}" ]] && continue
+            [[ -f "${file}" ]] || continue
+            paths+=( "${file}" )
+          done
+          if [[ ${#paths[@]} -eq 0 ]]; then
+            echo 'No existing paths to lint'
+            exit 0
+          fi
+          yamllint "${paths[@]}"

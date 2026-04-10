@@ -1,0 +1,8 @@
+---
+# Line length: allow tables and fenced blocks to exceed 80 (readable tables;
+# code samples keep upstream formatting).
+default: true
+MD013:
+  line_length: 80
+  code_blocks: false
+  tables: false
