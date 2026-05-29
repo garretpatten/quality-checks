@@ -37,7 +37,8 @@ Install optional tools listed in **AGENTS.md** when `lint-changed` reports a ski
 `test-workflow.yaml`.
 
 Shell script changes require **shfmt** and **shellcheck** (`brew install shfmt shellcheck`,
-or `npm run lint:shell` after installing shfmt).
+or `npm run lint:shell` after installing both). Use **`shellcheck -x`** so sourced files under
+`.github/scripts/` are checked.
 
 Documentation-only changes still need **Prettier** and **Markdownlint** on touched
 Markdown files.

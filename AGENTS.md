@@ -93,7 +93,7 @@ LINT_BASE=origin/main ./scripts/lint-changed.sh
 | ---------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
 | `.github/workflows/*.yaml`, `test-workflow.yaml`                                   | `npm run lint:yaml`, `npm run lint:workflows`                           |
 | `.github/ISSUE_TEMPLATE/**`, `dependabot.yaml`, `.yamllint`, `.markdownlint*.yaml` | `npm run lint:yaml`                                                     |
-| `.github/scripts/*.sh`, `scripts/*.sh`                                             | `npm run lint:shell`, `shellcheck <files>`                              |
+| `.github/scripts/*.sh`, `scripts/*.sh`                                             | `npm run lint:shell` (`shfmt` + `shellcheck -x` on all scripts)         |
 | `*.html`                                                                           | axe via `lint-changed.sh` (optional locally) or CI Accessibility Audits |
 | Workflow inputs / README tables                                                    | Keep **README.md** and workflow `inputs` in sync                        |
 
@@ -119,6 +119,8 @@ LINT_BASE=origin/main ./scripts/lint-changed.sh
 ### Checklist before handoff
 
 - [ ] **`npm run fix:docs`** exits 0 (or `npm run lint:docs` if you did not need to write)
+- [ ] **`npm run lint:shell`** exits 0 when you changed `.github/scripts/*.sh` or `scripts/*.sh` (use
+      `shellcheck -x` so sourced helpers are analyzed)
 - [ ] **`npm run lint`** or **`./scripts/lint-changed.sh`** exits 0 when you changed workflows, shell, or config
 - [ ] If workflows or inputs changed, README tables updated
 - [ ] New third-party actions use full commit SHAs

@@ -11,7 +11,7 @@
     "lint:md": "markdownlint-cli2",
     "lint:yaml": "yamllint .github .yamllint .markdownlint.yaml",
     "lint:workflows": "actionlint",
-    "lint:shell": "shfmt -d .github/scripts/*.sh scripts/*.sh"
+    "lint:shell": "shfmt -d .github/scripts/*.sh scripts/*.sh && shellcheck -x .github/scripts/*.sh scripts/*.sh"
   },
   "devDependencies": {
     "markdownlint-cli2": "^0.18.1",

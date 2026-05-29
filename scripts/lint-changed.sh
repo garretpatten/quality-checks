@@ -103,7 +103,7 @@ run_shellcheck() {
 		return 0
 	fi
 	echo '→ shellcheck'
-	shellcheck "${files[@]}"
+	shellcheck -x "${files[@]}"
 }
 
 run_typos() {

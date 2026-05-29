@@ -746,7 +746,7 @@ jobs:
             echo 'No existing paths to lint'
             exit 0
           fi
-          shellcheck "${paths[@]}"
+          shellcheck -x "${paths[@]}"
 
   stylua:
     if: ${{ inputs.stylua_run == true }}
