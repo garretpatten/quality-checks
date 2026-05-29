@@ -86,10 +86,11 @@ jobs:
         with:
           node-version: ${{ inputs.node_version }}
 
-      - name: 'Install axe-core CLI'
+      - name: 'Install axe-core and sync ChromeDriver'
         run: |
           set -euo pipefail
-          npm install -g @axe-core/cli
+          # shellcheck source=.github/scripts/qc-axe-setup.sh
+          source .github/scripts/qc-axe-setup.sh
 
       - name: 'Collect audit targets'
         id: targets
@@ -146,7 +147,7 @@ jobs:
           for url in "${remote_urls[@]}"; do
             [[ -z "${url}" ]] && continue
             echo "Auditing ${url}"
-            axe "${url}" --exit
+            axe --chromedriver-path "${CHROMEDRIVER_PATH}" "${url}" --exit
           done
 
       - name: 'Run axe on local HTML'
@@ -160,7 +161,7 @@ jobs:
           if [[ ${#html_paths[@]} -eq 0 ]] || [[ -z "${html_paths[0]}" ]]; then
             exit 0
           fi
-          npx --yes serve@14.2.4 -l "${QC_STATIC_PORT}" --no-clipboard . &
+          npx --yes serve@14.2.6 -l "${QC_STATIC_PORT}" --no-clipboard . &
           server_pid=$!
           cleanup() {
             kill "${server_pid}" 2>/dev/null || true
@@ -171,7 +172,7 @@ jobs:
             [[ -z "${path}" ]] && continue
             url="http://127.0.0.1:${QC_STATIC_PORT}/${path}"
             echo "Auditing ${url}"
-            axe "${url}" --exit
+            axe --chromedriver-path "${CHROMEDRIVER_PATH}" "${url}" --exit
           done
 
       - name: 'No audit targets'

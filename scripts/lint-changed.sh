@@ -167,15 +167,25 @@ run_axe_fixture() {
 		echo '→ axe-core (skipped — install: npm install -g @axe-core/cli)'
 		return 0
 	fi
+	if [[ -z "${CHROMEDRIVER_PATH:-}" ]]; then
+		if [[ -f .github/scripts/qc-axe-setup.sh ]]; then
+			# shellcheck source=.github/scripts/qc-axe-setup.sh
+			source .github/scripts/qc-axe-setup.sh
+		else
+			echo '→ axe-core (skipped — run: npx browser-driver-manager install chrome)'
+			return 0
+		fi
+	fi
 	echo '→ axe-core (local HTML via static server)'
-	npx --yes serve@14.2.4 -l 8765 --no-clipboard . &
+	npx --yes serve@14.2.6 -l 8765 --no-clipboard . &
 	server_pid=$!
 	trap 'kill "${server_pid}" 2>/dev/null || true' EXIT
 	sleep 2
 	local path
 	for path in "${files[@]}"; do
 		[[ -f "${path}" ]] || continue
-		axe "http://127.0.0.1:8765/${path}" --exit
+		axe --chromedriver-path "${CHROMEDRIVER_PATH}" \
+			"http://127.0.0.1:8765/${path}" --exit
 	done
 }
 

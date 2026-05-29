@@ -108,7 +108,7 @@ npm run lint
 | **shellcheck**                  | `brew install shellcheck`                                                                                   |
 | **typos**                       | `brew install typos-cli`                                                                                    |
 | **editorconfig-checker** (`ec`) | [releases](https://github.com/editorconfig-checker/editorconfig-checker/releases) (`ec-linux-amd64` binary) |
-| **axe-core CLI**                | `npm install -g @axe-core/cli`                                                                              |
+| **axe-core CLI**                | `source .github/scripts/qc-axe-setup.sh` (syncs Chrome + ChromeDriver)                                      |
 
 ### Checklist before handoff
 

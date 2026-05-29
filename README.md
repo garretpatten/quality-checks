@@ -243,7 +243,7 @@ narrow, high-signal addition.
 
 | Job            | Tool                                                           | When to use                                                |
 | -------------- | -------------------------------------------------------------- | ---------------------------------------------------------- |
-| **axe-core**   | [@axe-core/cli](https://www.npmjs.com/package/@axe-core/cli)   | Fast WCAG rule checks on URLs or HTML served from the repo |
+| **axe-core**   | [@axe-core/cli](https://www.npmjs.com/package/@axe-core/cli)   | WCAG checks; CI syncs ChromeDriver via `browser-driver-manager` |
 | **Lighthouse** | [Lighthouse CI](https://github.com/GoogleChrome/lighthouse-ci) | Accessibility category score gate on deployed URLs         |
 
 ### Typical patterns
