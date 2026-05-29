@@ -26,18 +26,19 @@ npm run fix:docs
 npm run lint:changed
 ```
 
-`fix:docs` formats and lints **all** Markdown (required on every PR). For a full Suite 1 pass:
+`fix:docs` formats and lints **all** Markdown (required on every PR). For a full Linters pass:
 
 ```bash
 npm run lint
 ```
 
 Install optional tools listed in **AGENTS.md** when `lint-changed` reports a skip.
-**`npm run lint`** mirrors CI **Suite 1 — Linters**; Suite 2 (accessibility) runs in
-CI via `test-workflow.yaml`.
+**`npm run lint`** mirrors CI **Linters**; **Accessibility Audits** run in CI via
+`test-workflow.yaml`.
 
 Shell script changes require **shfmt** and **shellcheck** (`brew install shfmt shellcheck`,
-or `npm run lint:shell` after installing shfmt).
+or `npm run lint:shell` after installing both). Use **`shellcheck -x`** so sourced files under
+`.github/scripts/` are checked.
 
 Documentation-only changes still need **Prettier** and **Markdownlint** on touched
 Markdown files.

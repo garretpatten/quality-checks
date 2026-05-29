@@ -22,7 +22,7 @@ on:
       node_version:
         description: Node.js version for axe-core and Lighthouse CI tooling.
         required: false
-        default: '20'
+        default: '24'
         type: string
       axe_run:
         description: >
