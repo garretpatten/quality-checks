@@ -8,7 +8,7 @@ on:
 
 jobs:
   linters:
-    name: 'Suite 1 — Linters'
+    name: 'Linters'
     uses: ./.github/workflows/quality-checks.yaml
     with:
       diff_base: ${{ github.event.pull_request.base.sha || '' }}
@@ -29,7 +29,7 @@ jobs:
     secrets: inherit
 
   accessibility:
-    name: 'Suite 2 — Accessibility'
+    name: 'Accessibility Audits'
     uses: ./.github/workflows/accessibility-checks.yaml
     with:
       diff_base: ${{ github.event.pull_request.base.sha || '' }}

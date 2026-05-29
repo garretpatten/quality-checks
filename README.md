@@ -14,9 +14,9 @@
 </p>
 
 <p align="center">
-    Suite 1 runs opt-in linters only on changed files. Suite 2 runs axe-core and
-    Lighthouse CI against deployed URLs and/or local HTML — tuned for fast,
-    actionable feedback in pull requests.
+    Linters run opt-in checks only on changed files. Accessibility Audits run
+    axe-core and Lighthouse CI against deployed URLs and/or local HTML — tuned
+    for fast, actionable feedback in pull requests.
 </p>
 
 <p align="center">
@@ -30,12 +30,12 @@
         alt="PR-scoped checks"
     />
     <img
-        src="https://img.shields.io/badge/Suite%201-linters-10b981?style=flat-square&logo=githubactions&logoColor=white"
-        alt="Suite 1: Linters"
+        src="https://img.shields.io/badge/Linters-10b981?style=flat-square&logo=githubactions&logoColor=white"
+        alt="Linters"
     />
     <img
-        src="https://img.shields.io/badge/Suite%202-a11y-7c3aed?style=flat-square&logo=lighthouse&logoColor=white"
-        alt="Suite 2: Accessibility"
+        src="https://img.shields.io/badge/Accessibility%20Audits-7c3aed?style=flat-square&logo=lighthouse&logoColor=white"
+        alt="Accessibility Audits"
     />
 </p>
 
@@ -68,17 +68,17 @@
 workflows](https://docs.github.com/en/actions/using-workflows/reusing-workflows)
 for pull requests:
 
-| Suite                 | Workflow                                                                     | Purpose                                      |
-| --------------------- | ---------------------------------------------------------------------------- | -------------------------------------------- |
-| **1 — Linters**       | [`quality-checks.yaml`](./.github/workflows/quality-checks.yaml)             | Language and config linters on the PR diff   |
-| **2 — Accessibility** | [`accessibility-checks.yaml`](./.github/workflows/accessibility-checks.yaml) | axe-core and Lighthouse accessibility audits |
+| Workflow                 | Reusable workflow                                                            | Purpose                                      |
+| ------------------------ | ---------------------------------------------------------------------------- | -------------------------------------------- |
+| **Linters**              | [`quality-checks.yaml`](./.github/workflows/quality-checks.yaml)             | Language and config linters on the PR diff   |
+| **Accessibility Audits** | [`accessibility-checks.yaml`](./.github/workflows/accessibility-checks.yaml) | axe-core and Lighthouse accessibility audits |
 
 Each tool is **opt-in** (`*_run` defaults to `false`). Jobs no-op when nothing
 relevant changed, keeping runs fast.
 
 ## Quick start
 
-### Suite 1 — Linters
+### Linters
 
 ```yaml
 name: 'Quality Checks'
@@ -87,7 +87,7 @@ on: pull_request
 
 jobs:
   linters:
-    name: 'Suite 1 — Linters'
+    name: 'Linters'
     uses: garretpatten/quality-checks/.github/workflows/quality-checks.yaml@master
     with:
       diff_base: ${{ github.event.pull_request.base.sha }}
@@ -107,7 +107,7 @@ jobs:
     secrets: inherit
 ```
 
-### Suite 2 — Accessibility
+### Accessibility Audits
 
 ```yaml
 name: 'Accessibility Checks'
@@ -116,7 +116,7 @@ on: pull_request
 
 jobs:
   accessibility:
-    name: 'Suite 2 — Accessibility'
+    name: 'Accessibility Audits'
     uses: garretpatten/quality-checks/.github/workflows/accessibility-checks.yaml@master
     with:
       axe_run: true
@@ -145,12 +145,12 @@ with:
   diff_base: ${{ github.event.pull_request.base.sha }}
 ```
 
-## Suite 1 — Linter inputs
+## Linter inputs
 
 | Parameter           | Type    | Default     | Description                                   |
 | ------------------- | ------- | ----------- | --------------------------------------------- |
 | `diff_base`         | string  | _(empty)_   | Git ref to diff against                       |
-| `node_version`      | string  | `20`        | Node.js for ESLint, markdownlint, Prettier    |
+| `node_version`      | string  | `24`        | Node.js for ESLint, markdownlint, Prettier    |
 | `go_version`        | string  | `stable`    | Go toolchain for golangci-lint                |
 | `stylua_args`       | string  | `--check .` | Arguments for StyLua                          |
 | `stylua_version`    | string  | `v2.4.1`    | StyLua release tag                            |
@@ -171,12 +171,12 @@ with:
 | `typos_config`      | string  | _(empty)_   | Path to `typos.toml` (auto-detected if empty) |
 | `yamllint_run`      | boolean | `false`     | Yamllint                                      |
 
-## Suite 2 — Accessibility inputs
+## Accessibility inputs
 
 | Parameter                      | Type    | Default   | Description                                           |
 | ------------------------------ | ------- | --------- | ----------------------------------------------------- |
 | `diff_base`                    | string  | _(empty)_ | Git ref for changed `.html` detection                 |
-| `node_version`                 | string  | `20`      | Node.js for axe-core CLI                              |
+| `node_version`                 | string  | `24`      | Node.js for axe-core CLI                              |
 | `axe_run`                      | boolean | `false`   | Run axe-core audits                                   |
 | `lighthouse_run`               | boolean | `false`   | Run Lighthouse CI (accessibility category)            |
 | `urls`                         | string  | _(empty)_ | URLs to audit (one per line; required for Lighthouse) |
@@ -187,7 +187,7 @@ with:
 If the consumer repo already has `lighthouserc.json` or `lighthouserc.js`, that
 config is used instead of the generated accessibility-only defaults.
 
-## Supported linters (Suite 1)
+## Supported linters
 
 | Tool              | Files                                  | Notes                                             |
 | ----------------- | -------------------------------------- | ------------------------------------------------- |
@@ -239,7 +239,7 @@ Biome-as-full-replacement) or need heavy language SDKs (RuboCop, Clippy, `terraf
 are out of scope so the workflow stays maintainable. Open an issue if you need a
 narrow, high-signal addition.
 
-## Accessibility (Suite 2)
+## Accessibility
 
 | Job            | Tool                                                           | When to use                                                     |
 | -------------- | -------------------------------------------------------------- | --------------------------------------------------------------- |

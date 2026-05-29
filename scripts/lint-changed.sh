@@ -27,7 +27,7 @@ mapfile -t changed < <(
 		git diff --name-only --diff-filter=ACMR "${BASE_REF}"...HEAD 2>/dev/null || true
 		git diff --name-only
 		git diff --cached --name-only
-	} | sed '/^$/d' | sort -u
+	} | sed '/^$/d' | sort -u | .github/scripts/qc-filter-changed-paths.sh
 )
 
 if [[ ${#changed[@]} -eq 0 ]]; then

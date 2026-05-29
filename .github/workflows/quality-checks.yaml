@@ -24,7 +24,7 @@ on:
           Node.js version for ESLint, markdownlint-cli2, Prettier, and
           accessibility-related installs in sibling workflows.
         required: false
-        default: '20'
+        default: '24'
         type: string
       go_version:
         description: Go toolchain version for golangci-lint.
@@ -169,17 +169,14 @@ jobs:
           fetch-depth: 0
 
       - name: 'Install actionlint'
+        id: actionlint-install
         env:
           # Pin release; bump intentionally when upgrading.
-          ACTIONLINT_VERSION: v1.7.7
+          ACTIONLINT_VERSION: '1.7.12'
         run: |
           set -euo pipefail
-          tag="${ACTIONLINT_VERSION#v}"
-          url="https://github.com/rhysd/actionlint/releases/download/${ACTIONLINT_VERSION}/actionlint_${tag}_linux_amd64.tar.gz"
-          curl -fsSL "$url" -o actionlint.tar.gz
-          tar -xzf actionlint.tar.gz actionlint
-          sudo mv actionlint /usr/local/bin/
-          rm actionlint.tar.gz
+          # shellcheck source=.github/scripts/qc-actionlint-setup.sh
+          source .github/scripts/qc-actionlint-setup.sh
 
       - name: 'Get changed GitHub Actions files'
         id: changed-files
@@ -235,7 +232,7 @@ jobs:
             echo 'No existing paths to lint'
             exit 0
           fi
-          actionlint "${paths[@]}"
+          "${ACTIONLINT_BIN:-actionlint}" "${paths[@]}"
 
   eslint:
     if: ${{ inputs.eslint_run == true }}
@@ -494,7 +491,8 @@ jobs:
           fi
           mapfile -t CHANGED_FILES < <(
             git diff --name-only --diff-filter=ACMR "${BASE_REF}"...HEAD |
-              grep -E '\.(md|markdown)$' || true
+              grep -E '\.(md|markdown)$' |
+              .github/scripts/qc-filter-changed-paths.sh || true
           )
           if [[ ${#CHANGED_FILES[@]} -gt 0 ]] && \
             [[ -n "${CHANGED_FILES[0]}" ]]; then
@@ -571,7 +569,8 @@ jobs:
           mapfile -t CHANGED_FILES < <(
             git diff --name-only --diff-filter=ACMR "${BASE_REF}"...HEAD |
               grep -E \
-                '\.(js|jsx|ts|tsx|json|css|scss|md|markdown)$' || true
+                '\.(js|jsx|ts|tsx|json|css|scss|md|markdown)$' |
+              .github/scripts/qc-filter-changed-paths.sh || true
           )
           if [[ ${#CHANGED_FILES[@]} -gt 0 ]] && \
             [[ -n "${CHANGED_FILES[0]}" ]]; then

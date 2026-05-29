@@ -1,20 +1,20 @@
 # Agent guide — quality-checks
 
-Reusable GitHub Actions for **Suite 1 (linters)** and **Suite 2 (accessibility)** on
-pull-request diffs. Keep workflows **opt-in**, **PR-scoped**, and **pinned to commit
-SHAs** for third-party actions.
+Reusable GitHub Actions for **Linters** and **Accessibility Audits** on pull-request
+diffs. Keep workflows **opt-in**, **PR-scoped**, and **pinned to commit SHAs** for
+third-party actions.
 
 ## Repository layout
 
-| Path                                          | Purpose                                      |
-| --------------------------------------------- | -------------------------------------------- |
-| `.github/workflows/quality-checks.yaml`       | Reusable linter workflow (Suite 1)           |
-| `.github/workflows/accessibility-checks.yaml` | Reusable axe + Lighthouse workflow (Suite 2) |
-| `.github/workflows/test-workflow.yaml`        | Self-test on PRs (both suites)               |
-| `.github/scripts/qc-resolve-base.sh`          | Shared diff-base resolution for jobs         |
-| `scripts/lint-changed.sh`                     | Run local linters matching changed files     |
-| `docs/assets/`                                | Branding (logo SVG)                          |
-| `docs/fixtures/a11y-sample.html`              | axe self-test fixture                        |
+| Path                                          | Purpose                                  |
+| --------------------------------------------- | ---------------------------------------- |
+| `.github/workflows/quality-checks.yaml`       | Reusable linter workflow                 |
+| `.github/workflows/accessibility-checks.yaml` | Reusable axe + Lighthouse workflow       |
+| `.github/workflows/test-workflow.yaml`        | Self-test on PRs (both workflows)        |
+| `.github/scripts/qc-resolve-base.sh`          | Shared diff-base resolution for jobs     |
+| `scripts/lint-changed.sh`                     | Run local linters matching changed files |
+| `docs/assets/`                                | Branding (logo SVG)                      |
+| `docs/fixtures/a11y-sample.html`              | axe self-test fixture                    |
 
 ## Workflow conventions
 
@@ -73,7 +73,7 @@ npm run lint:docs
 ./scripts/lint-changed.sh
 ```
 
-Or the full Suite 1 pass:
+Or the full Linters pass:
 
 ```bash
 npm run lint
@@ -89,26 +89,26 @@ LINT_BASE=origin/main ./scripts/lint-changed.sh
 
 ### If you edited … also run …
 
-| Paths you changed                                                                  | Additional checks                                          |
-| ---------------------------------------------------------------------------------- | ---------------------------------------------------------- |
-| `.github/workflows/*.yaml`, `test-workflow.yaml`                                   | `npm run lint:yaml`, `npm run lint:workflows`              |
-| `.github/ISSUE_TEMPLATE/**`, `dependabot.yaml`, `.yamllint`, `.markdownlint*.yaml` | `npm run lint:yaml`                                        |
-| `.github/scripts/*.sh`, `scripts/*.sh`                                             | `npm run lint:shell`, `shellcheck <files>`                 |
-| `*.html`                                                                           | axe via `lint-changed.sh` (optional locally) or CI Suite 2 |
-| Workflow inputs / README tables                                                    | Keep **README.md** and workflow `inputs` in sync           |
+| Paths you changed                                                                  | Additional checks                                                       |
+| ---------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| `.github/workflows/*.yaml`, `test-workflow.yaml`                                   | `npm run lint:yaml`, `npm run lint:workflows`                           |
+| `.github/ISSUE_TEMPLATE/**`, `dependabot.yaml`, `.yamllint`, `.markdownlint*.yaml` | `npm run lint:yaml`                                                     |
+| `.github/scripts/*.sh`, `scripts/*.sh`                                             | `npm run lint:shell`, `shellcheck <files>`                              |
+| `*.html`                                                                           | axe via `lint-changed.sh` (optional locally) or CI Accessibility Audits |
+| Workflow inputs / README tables                                                    | Keep **README.md** and workflow `inputs` in sync                        |
 
-### Suite mapping (CI vs local)
+### Workflow mapping (CI vs local)
 
-| Suite                 | CI workflow                                   | Local equivalent                                                                                                      |
-| --------------------- | --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| **1 — Linters**       | `test-workflow` → `quality-checks.yaml`       | `npm run lint` (includes `lint:docs`)                                                                                 |
-| **2 — Accessibility** | `test-workflow` → `accessibility-checks.yaml` | axe on changed `.html` via `lint-changed.sh`; Lighthouse needs deployed `urls` (CI only unless you pass URLs locally) |
+| Workflow                 | CI workflow                                   | Local equivalent                                                                                                      |
+| ------------------------ | --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| **Linters**              | `test-workflow` → `quality-checks.yaml`       | `npm run lint` (includes `lint:docs`)                                                                                 |
+| **Accessibility Audits** | `test-workflow` → `accessibility-checks.yaml` | axe on changed `.html` via `lint-changed.sh`; Lighthouse needs deployed `urls` (CI only unless you pass URLs locally) |
 
 ### Tool install (if a script reports “skipped”)
 
 | Tool                            | Install                                                                                                     |
 | ------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| **actionlint**                  | `brew install actionlint`                                                                                   |
+| **actionlint**                  | `brew install actionlint` (CI uses `.github/scripts/qc-actionlint-setup.sh`, pinned `1.7.12`)               |
 | **yamllint**                    | `pip install yamllint`                                                                                      |
 | **shfmt**                       | `brew install shfmt`                                                                                        |
 | **shellcheck**                  | `brew install shellcheck`                                                                                   |
