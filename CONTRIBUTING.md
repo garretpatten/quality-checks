@@ -17,20 +17,23 @@ Use [GitHub Issues](https://github.com/garretpatten/quality-checks/issues) with 
 
 ### Checks (from repo root)
 
+Agents and contributors should run linters on **changed files** before opening or
+updating a PR. See **[AGENTS.md](./AGENTS.md)** for the full matrix.
+
 ```bash
 npm install
+npm run lint:changed
+```
+
+For a full-repo pass (or when many areas changed):
+
+```bash
 npm run lint
 ```
 
-Or step by step:
+Install optional tools listed in **AGENTS.md** when `lint-changed` reports a skip.
+**`npm run lint`** mirrors CI **Suite 1 — Linters**; Suite 2 (accessibility) runs in
+CI via `test-workflow.yaml`.
 
-```bash
-npx prettier --check .
-npx markdownlint-cli2 "**/*.md" "#node_modules"
-yamllint .github .yamllint .markdownlint.yaml
-actionlint
-```
-
-Install **actionlint** and **yamllint** locally if missing (`brew install actionlint`, `pip install yamllint`). **`npm run lint`** mirrors CI **Suite 1 — Linters** for this repository.
-
-Documentation-only changes still need **Prettier** and **Markdownlint** on touched Markdown files.
+Documentation-only changes still need **Prettier** and **Markdownlint** on touched
+Markdown files.

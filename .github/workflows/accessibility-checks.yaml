@@ -187,7 +187,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       QC_URLS: ${{ inputs.urls }}
-      QC_LIGHTHOUSE_MIN_ACCESSIBILITY: ${{ inputs.lighthouse_min_accessibility }}
+      QC_LHCI_MIN_SCORE: ${{ inputs.lighthouse_min_accessibility }}
 
     steps:
       - name: 'Checkout Code'
@@ -219,7 +219,7 @@ jobs:
             echo 'Using repository Lighthouse CI config'
             exit 0
           fi
-          jq -n --argjson min "${QC_LIGHTHOUSE_MIN_ACCESSIBILITY}" \
+          jq -n --argjson min "${QC_LHCI_MIN_SCORE}" \
             '{
               ci: {
                 collect: {
@@ -235,7 +235,8 @@ jobs:
             }' > lighthouserc.json
 
       - name: 'Run Lighthouse CI'
-        uses: treosh/lighthouse-ci-action@0b7bcdffda3ec1e1c81a3019ef427c4bac475e3f # yamllint disable-line rule:line-length
+        # yamllint disable-line rule:line-length
+        uses: treosh/lighthouse-ci-action@0b7bcdffda3ec1e1c81a3019ef427c4bac475e3f
         with:
           urls: |
             ${{ steps.urls.outputs.list }}
