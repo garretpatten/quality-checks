@@ -125,6 +125,14 @@ on:
         required: false
         default: false
         type: boolean
+      typos_config:
+        description: >
+          Optional path to a typos config file in the consumer repository
+          (e.g. typos.toml). When empty, auto-detects typos.toml, _typos.toml,
+          or .typos.toml at the repository root.
+        required: false
+        default: ''
+        type: string
       editorconfig_run:
         description: >
           Boolean flag indicating whether editorconfig-checker should be
@@ -907,6 +915,8 @@ jobs:
     if: ${{ inputs.typos_run == true }}
     name: 'typos - Spell Checker'
     runs-on: ubuntu-latest
+    env:
+      QC_TYPOS_CONFIG: ${{ inputs.typos_config }}
 
     steps:
       - name: 'Checkout Code'
@@ -974,7 +984,14 @@ jobs:
             echo 'No existing paths to check'
             exit 0
           fi
-          typos "${paths[@]}"
+          # shellcheck source=.github/scripts/qc-typos-args.sh
+          source .github/scripts/qc-typos-args.sh
+          if [[ ${#TYPOS_CLI_ARGS[@]} -gt 0 ]]; then
+            echo "Using typos config: ${TYPOS_CLI_ARGS[1]}"
+          else
+            echo 'No typos.toml found; using built-in dictionary only'
+          fi
+          typos "${TYPOS_CLI_ARGS[@]}" "${paths[@]}"
 
   editorconfig:
     if: ${{ inputs.editorconfig_run == true }}

@@ -147,28 +147,29 @@ with:
 
 ## Suite 1 — Linter inputs
 
-| Parameter           | Type    | Default     | Description                                |
-| ------------------- | ------- | ----------- | ------------------------------------------ |
-| `diff_base`         | string  | _(empty)_   | Git ref to diff against                    |
-| `node_version`      | string  | `20`        | Node.js for ESLint, markdownlint, Prettier |
-| `go_version`        | string  | `stable`    | Go toolchain for golangci-lint             |
-| `stylua_args`       | string  | `--check .` | Arguments for StyLua                       |
-| `stylua_version`    | string  | `v2.4.1`    | StyLua release tag                         |
-| `actionlint_run`    | boolean | `false`     | GitHub Actions workflow linter             |
-| `editorconfig_run`  | boolean | `false`     | EditorConfig consistency                   |
-| `eslint_run`        | boolean | `false`     | ESLint (JS/TS)                             |
-| `golangci_lint_run` | boolean | `false`     | golangci-lint (`--new-from-rev`)           |
-| `hadolint_run`      | boolean | `false`     | Dockerfile linter                          |
-| `jq_run`            | boolean | `false`     | JSON syntax validation                     |
-| `markdownlint_run`  | boolean | `false`     | Markdownlint-cli2                          |
-| `prettier_run`      | boolean | `false`     | Prettier format check                      |
-| `ruff_run`          | boolean | `false`     | Ruff (Python)                              |
-| `shellcheck_run`    | boolean | `false`     | ShellCheck                                 |
-| `shfmt_run`         | boolean | `false`     | shfmt shell formatting                     |
-| `stylua_run`        | boolean | `false`     | StyLua (Lua)                               |
-| `taplo_run`         | boolean | `false`     | Taplo (TOML)                               |
-| `typos_run`         | boolean | `false`     | typos spell checker                        |
-| `yamllint_run`      | boolean | `false`     | Yamllint                                   |
+| Parameter           | Type    | Default     | Description                                   |
+| ------------------- | ------- | ----------- | --------------------------------------------- |
+| `diff_base`         | string  | _(empty)_   | Git ref to diff against                       |
+| `node_version`      | string  | `20`        | Node.js for ESLint, markdownlint, Prettier    |
+| `go_version`        | string  | `stable`    | Go toolchain for golangci-lint                |
+| `stylua_args`       | string  | `--check .` | Arguments for StyLua                          |
+| `stylua_version`    | string  | `v2.4.1`    | StyLua release tag                            |
+| `actionlint_run`    | boolean | `false`     | GitHub Actions workflow linter                |
+| `editorconfig_run`  | boolean | `false`     | EditorConfig consistency                      |
+| `eslint_run`        | boolean | `false`     | ESLint (JS/TS)                                |
+| `golangci_lint_run` | boolean | `false`     | golangci-lint (`--new-from-rev`)              |
+| `hadolint_run`      | boolean | `false`     | Dockerfile linter                             |
+| `jq_run`            | boolean | `false`     | JSON syntax validation                        |
+| `markdownlint_run`  | boolean | `false`     | Markdownlint-cli2                             |
+| `prettier_run`      | boolean | `false`     | Prettier format check                         |
+| `ruff_run`          | boolean | `false`     | Ruff (Python)                                 |
+| `shellcheck_run`    | boolean | `false`     | ShellCheck                                    |
+| `shfmt_run`         | boolean | `false`     | shfmt shell formatting                        |
+| `stylua_run`        | boolean | `false`     | StyLua (Lua)                                  |
+| `taplo_run`         | boolean | `false`     | Taplo (TOML)                                  |
+| `typos_run`         | boolean | `false`     | typos spell checker                           |
+| `typos_config`      | string  | _(empty)_   | Path to `typos.toml` (auto-detected if empty) |
+| `yamllint_run`      | boolean | `false`     | Yamllint                                      |
 
 ## Suite 2 — Accessibility inputs
 
@@ -203,8 +204,24 @@ config is used instead of the generated accessibility-only defaults.
 | **shfmt**         | `.sh`, `.bash`, `.zsh`                 | Shell formatting (`-d`)                           |
 | **StyLua**        | Lua (via `stylua_args`)                | Whole-tree or path-scoped                         |
 | **Taplo**         | `.toml`                                | TOML lint                                         |
-| **typos**         | `.md`, `.txt`, `.rst`, `.html`, …      | Prose spell check only; not code or YAML          |
+| **typos**         | `.md`, `.txt`, `.rst`, `.html`, …      | Prose spell check; uses your repo’s `typos.toml`  |
 | **Yamllint**      | `.yml`, `.yaml`                        | General YAML lint                                 |
+
+### typos.toml in consumer repositories
+
+When `typos_run: true`, the job checks out **your** repository and runs `typos` from
+its root. Your `typos.toml` (or `_typos.toml` / `.typos.toml`) is loaded automatically
+so you can allow names, product terms, and other valid words:
+
+```toml
+[default.extend-words]
+Patten = "Patten"
+MyProduct = "MyProduct"
+```
+
+Copy [docs/typos.toml.example](./docs/typos.toml.example) as a starting point. For a
+config file outside the root, pass `typos_config: path/to/typos.toml` in the workflow
+`with:` block.
 
 ### Intentional overlap (not redundant)
 

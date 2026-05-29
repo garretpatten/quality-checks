@@ -136,7 +136,12 @@ run_typos() {
 		return 0
 	fi
 	echo '→ typos'
-	typos "${files[@]}"
+	# shellcheck source=.github/scripts/qc-typos-args.sh
+	source .github/scripts/qc-typos-args.sh
+	if [[ ${#TYPOS_CLI_ARGS[@]} -gt 0 ]]; then
+		echo "  config: ${TYPOS_CLI_ARGS[1]}"
+	fi
+	typos "${TYPOS_CLI_ARGS[@]}" "${files[@]}"
 }
 
 run_editorconfig() {

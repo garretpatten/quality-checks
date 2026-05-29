@@ -41,7 +41,8 @@ These three tools are canonical; others must not fight them:
 | **yamllint**     | All YAML under `.github/`, config YAML | —                                                          |
 
 Run **Prettier before markdownlint** on Markdown. Never run Prettier on YAML in this
-repo. **typos** runs on Markdown/plain-text/docs only (not YAML, code, or JSON).
+repo. **typos** runs on Markdown/plain-text/docs only (not YAML, code, or JSON) and
+loads the repo’s `typos.toml` when present (see `.github/scripts/qc-typos-args.sh`).
 Optional tools (**editorconfig**, **shfmt**) must not rewrite Markdown or YAML.
 
 ## Verify before you finish (required)
