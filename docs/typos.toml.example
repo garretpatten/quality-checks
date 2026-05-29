@@ -1,0 +1,15 @@
+# Example typos.toml for repositories that call quality-checks.
+# Copy to your repository root as typos.toml and customize.
+#
+# https://github.com/crate-ci/typos/blob/master/docs/reference.md
+
+[default.extend-words]
+# Valid words typos would otherwise flag (names, product terms, acronyms).
+# Example = "Example"
+
+[default.extend-identifiers]
+# Valid identifiers in prose (optional).
+# MyVariable = "MyVariable"
+
+# [files]
+# extend-exclude = ["docs/generated/**"]

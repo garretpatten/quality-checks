@@ -1,8 +1,7 @@
 ---
-# Line length: allow tables and fenced blocks to exceed 80 (readable tables;
-# code samples keep upstream formatting).
+# Aligned with Prettier (printWidth 100, proseWrap: preserve). Prettier owns
+# wrapping; markdownlint owns structure and semantics — not line length or HTML.
 default: true
-MD013:
-  line_length: 80
-  code_blocks: false
-  tables: false
+MD013: false
+MD033: false
+MD041: false

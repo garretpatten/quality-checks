@@ -1,5 +1,20 @@
 {
+  "name": "quality-checks",
+  "scripts": {
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "format:md": "prettier --write \"**/*.md\"",
+    "lint:docs": "npm run format:check && npm run lint:md",
+    "fix:docs": "npm run format:md && npm run lint:md",
+    "lint": "npm run lint:docs && npm run lint:yaml && npm run lint:workflows",
+    "lint:changed": "./scripts/lint-changed.sh",
+    "lint:md": "markdownlint-cli2",
+    "lint:yaml": "yamllint .github .yamllint .markdownlint.yaml",
+    "lint:workflows": "actionlint",
+    "lint:shell": "shfmt -d .github/scripts/*.sh scripts/*.sh"
+  },
   "devDependencies": {
+    "markdownlint-cli2": "^0.18.1",
     "prettier": "^3.6.2"
   }
 }

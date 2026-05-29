@@ -13,13 +13,5 @@
   "endOfLine": "lf",
   "proseWrap": "preserve",
   "htmlWhitespaceSensitivity": "css",
-  "embeddedLanguageFormatting": "auto",
-  "overrides": [
-    {
-      "files": "*.yaml,*.yml",
-      "options": {
-        "printWidth": 80
-      }
-    }
-  ]
+  "embeddedLanguageFormatting": "auto"
 }

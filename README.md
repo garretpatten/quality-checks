@@ -1,25 +1,84 @@
-# Quality Checks
+<p align="center">
+    <img
+        src="./docs/assets/quality-checks-mark.svg"
+        alt="Quality Checks logo"
+        width="96"
+        height="96"
+    />
+</p>
 
-## Table of Contents
+<h1 align="center">Quality Checks</h1>
 
-- [Overview](#overview)
-- [Example Consumer Workflow](#example-consumer-workflow)
-- [Reusable Workflow Architecture](#reusable-workflow-architecture)
-- [Input Parameters](#input-parameters)
-- [Supported Linters](#supported-linters)
+<p align="center">
+    <strong>Reusable GitHub Actions for PR-scoped linting and accessibility audits.</strong>
+</p>
+
+<p align="center">
+    Suite 1 runs opt-in linters only on changed files. Suite 2 runs axe-core and
+    Lighthouse CI against deployed URLs and/or local HTML — tuned for fast,
+    actionable feedback in pull requests.
+</p>
+
+<p align="center">
+    <a href="./LICENSE"
+        ><img
+            src="https://img.shields.io/github/license/garretpatten/quality-checks?style=flat-square"
+            alt="License: MIT"
+    /></a>
+    <img
+        src="https://img.shields.io/badge/scope-PR%20diff-059669?style=flat-square"
+        alt="PR-scoped checks"
+    />
+    <img
+        src="https://img.shields.io/badge/Suite%201-linters-10b981?style=flat-square&logo=githubactions&logoColor=white"
+        alt="Suite 1: Linters"
+    />
+    <img
+        src="https://img.shields.io/badge/Suite%202-a11y-7c3aed?style=flat-square&logo=lighthouse&logoColor=white"
+        alt="Suite 2: Accessibility"
+    />
+</p>
+
+<p align="center">
+    <a href="https://github.com/garretpatten/quality-checks/actions/workflows/test-workflow.yaml"
+        ><img
+            src="https://img.shields.io/github/actions/workflow/status/garretpatten/quality-checks/test-workflow.yaml?branch=master&label=CI&logo=github&style=flat-square"
+            alt="Test workflow status"
+    /></a>
+    <a href="https://github.com/garretpatten/quality-checks/blob/master/CODE_OF_CONDUCT.md"
+        ><img
+            src="https://img.shields.io/badge/Community-Standards-2563eb?style=flat-square"
+            alt="GitHub Community Standards"
+    /></a>
+</p>
+
+<p align="center">
+    ✓ Opt-in linters &nbsp;
+    ✓ Changed-files only &nbsp;
+    ✓ axe-core + Lighthouse &nbsp;
+    ✓ Consumer-friendly inputs &nbsp;
+    ✓ MIT licensed
+</p>
+
+---
 
 ## Overview
 
-This repository contains a reusable GitHub Actions workflow that performs
-quality checks on code in pull requests. The workflow runs linters (Actionlint,
-ESLint, Hadolint, jq, Markdownlint, Prettier, Ruff, ShellCheck, StyLua, Taplo,
-and Yamllint) on committed code changes and fails if any linting errors are
-detected.
+**Quality Checks** provides two [reusable
+workflows](https://docs.github.com/en/actions/using-workflows/reusing-workflows)
+for pull requests:
 
-## Example Consumer Workflow
+| Suite                 | Workflow                                                                     | Purpose                                      |
+| --------------------- | ---------------------------------------------------------------------------- | -------------------------------------------- |
+| **1 — Linters**       | [`quality-checks.yaml`](./.github/workflows/quality-checks.yaml)             | Language and config linters on the PR diff   |
+| **2 — Accessibility** | [`accessibility-checks.yaml`](./.github/workflows/accessibility-checks.yaml) | axe-core and Lighthouse accessibility audits |
 
-To use this reusable workflow in your repository, create a workflow file (e.g.,
-`.github/workflows/quality-checks.yaml`) that calls it:
+Each tool is **opt-in** (`*_run` defaults to `false`). Jobs no-op when nothing
+relevant changed, keeping runs fast.
+
+## Quick start
+
+### Suite 1 — Linters
 
 ```yaml
 name: 'Quality Checks'
@@ -27,10 +86,13 @@ name: 'Quality Checks'
 on: pull_request
 
 jobs:
-  quality-checks:
+  linters:
+    name: 'Suite 1 — Linters'
     uses: garretpatten/quality-checks/.github/workflows/quality-checks.yaml@master
     with:
+      diff_base: ${{ github.event.pull_request.base.sha }}
       actionlint_run: true
+      editorconfig_run: true
       eslint_run: true
       hadolint_run: true
       jq_run: true
@@ -38,200 +100,171 @@ jobs:
       prettier_run: true
       ruff_run: true
       shellcheck_run: true
+      shfmt_run: true
       taplo_run: true
+      typos_run: true
       yamllint_run: true
     secrets: inherit
 ```
 
-## Reusable Workflow Architecture
+### Suite 2 — Accessibility
 
-This repository contains a
-[reusable workflow](https://docs.github.com/en/actions/using-workflows/reusing-workflows)
-located at
-[.github/workflows/quality-checks.yaml](.github/workflows/quality-checks.yaml).
-The workflow is designed to perform essential quality checks across projects
-by running linters on code changes in pull requests.
+```yaml
+name: 'Accessibility Checks'
 
-The workflow checks only the files that have been changed in the pull
-request, making it efficient and focused on the code being reviewed. Each
-linter is invoked once with the full list of changed paths (where the tool
-supports that), which matches typical CLI usage and keeps runs fast.
+on: pull_request
+
+jobs:
+  accessibility:
+    name: 'Suite 2 — Accessibility'
+    uses: garretpatten/quality-checks/.github/workflows/accessibility-checks.yaml@master
+    with:
+      axe_run: true
+      lighthouse_run: true
+      urls: |
+        https://your-preview.example.com/
+      local_html_paths: |
+        docs/index.html
+      lighthouse_min_accessibility: '0.9'
+    secrets: inherit
+```
+
+**Pin a commit SHA** instead of `@master` for supply-chain control:
+
+```yaml
+uses: garretpatten/quality-checks/.github/workflows/quality-checks.yaml@<full-commit-sha>
+```
 
 ### Comparing against the correct base commit
 
-By default, the workflow diffs against `origin/main`, then `origin/master`,
-otherwise `HEAD~1`. For pull requests, you can pin the base explicitly so
-only commits on the PR branch are checked (recommended when the default branch
-is not `main`/`master`, or you want an exact merge-base):
+By default, workflows diff against `origin/main`, then `origin/master`, otherwise
+`HEAD~1`. For pull requests, pin the merge base:
 
 ```yaml
 with:
   diff_base: ${{ github.event.pull_request.base.sha }}
-  prettier_run: true
 ```
 
-## Input Parameters
+## Suite 1 — Linter inputs
 
-Each linter is **opt-in**: every `*_run` input defaults to `false`, so
-callers must pass `true` for each tool they want to run (as in the
-[example](#example-consumer-workflow) above).
+| Parameter           | Type    | Default     | Description                                   |
+| ------------------- | ------- | ----------- | --------------------------------------------- |
+| `diff_base`         | string  | _(empty)_   | Git ref to diff against                       |
+| `node_version`      | string  | `20`        | Node.js for ESLint, markdownlint, Prettier    |
+| `go_version`        | string  | `stable`    | Go toolchain for golangci-lint                |
+| `stylua_args`       | string  | `--check .` | Arguments for StyLua                          |
+| `stylua_version`    | string  | `v2.4.1`    | StyLua release tag                            |
+| `actionlint_run`    | boolean | `false`     | GitHub Actions workflow linter                |
+| `editorconfig_run`  | boolean | `false`     | EditorConfig consistency                      |
+| `eslint_run`        | boolean | `false`     | ESLint (JS/TS)                                |
+| `golangci_lint_run` | boolean | `false`     | golangci-lint (`--new-from-rev`)              |
+| `hadolint_run`      | boolean | `false`     | Dockerfile linter                             |
+| `jq_run`            | boolean | `false`     | JSON syntax validation                        |
+| `markdownlint_run`  | boolean | `false`     | Markdownlint-cli2                             |
+| `prettier_run`      | boolean | `false`     | Prettier format check                         |
+| `ruff_run`          | boolean | `false`     | Ruff (Python)                                 |
+| `shellcheck_run`    | boolean | `false`     | ShellCheck                                    |
+| `shfmt_run`         | boolean | `false`     | shfmt shell formatting                        |
+| `stylua_run`        | boolean | `false`     | StyLua (Lua)                                  |
+| `taplo_run`         | boolean | `false`     | Taplo (TOML)                                  |
+| `typos_run`         | boolean | `false`     | typos spell checker                           |
+| `typos_config`      | string  | _(empty)_   | Path to `typos.toml` (auto-detected if empty) |
+| `yamllint_run`      | boolean | `false`     | Yamllint                                      |
 
-| Parameter          | Type    | Required | Default     | Description                                                           |
-| ------------------ | ------- | -------- | ----------- | --------------------------------------------------------------------- |
-| `diff_base`        | string  | No       | _(empty)_   | Git ref (SHA or branch) to diff against; see above                    |
-| `node_version`     | string  | No       | `20`        | Node.js version for ESLint, markdownlint-cli2, and Prettier           |
-| `stylua_args`      | string  | No       | `--check .` | Arguments passed to [StyLua](https://github.com/JohnnyMorganz/StyLua) |
-| `stylua_version`   | string  | No       | `v2.4.1`    | StyLua release tag for `JohnnyMorganz/stylua-action`                  |
-| `actionlint_run`   | boolean | No       | `false`     | Whether to run the Actionlint GitHub Actions linter                   |
-| `eslint_run`       | boolean | No       | `false`     | Whether to run the ESLint JavaScript/TypeScript linter                |
-| `hadolint_run`     | boolean | No       | `false`     | Whether to run the Hadolint Dockerfile linter                         |
-| `jq_run`           | boolean | No       | `false`     | Whether to run the jq JSON validator                                  |
-| `markdownlint_run` | boolean | No       | `false`     | Whether to run the Markdownlint Markdown linter                       |
-| `prettier_run`     | boolean | No       | `false`     | Whether to run the Prettier code formatter check                      |
-| `ruff_run`         | boolean | No       | `false`     | Whether to run the Ruff Python linter                                 |
-| `shellcheck_run`   | boolean | No       | `false`     | Whether to run the ShellCheck shell script linter                     |
-| `stylua_run`       | boolean | No       | `false`     | Whether to run the StyLua Lua formatter check                         |
-| `taplo_run`        | boolean | No       | `false`     | Whether to run the Taplo TOML linter                                  |
-| `yamllint_run`     | boolean | No       | `false`     | Whether to run the Yamllint YAML linter                               |
+## Suite 2 — Accessibility inputs
 
-## Supported Linters
+| Parameter                      | Type    | Default   | Description                                           |
+| ------------------------------ | ------- | --------- | ----------------------------------------------------- |
+| `diff_base`                    | string  | _(empty)_ | Git ref for changed `.html` detection                 |
+| `node_version`                 | string  | `20`      | Node.js for axe-core CLI                              |
+| `axe_run`                      | boolean | `false`   | Run axe-core audits                                   |
+| `lighthouse_run`               | boolean | `false`   | Run Lighthouse CI (accessibility category)            |
+| `urls`                         | string  | _(empty)_ | URLs to audit (one per line; required for Lighthouse) |
+| `local_html_paths`             | string  | _(empty)_ | Extra repo HTML paths served locally for axe          |
+| `lighthouse_min_accessibility` | string  | `0.9`     | Minimum Lighthouse accessibility score (0–1)          |
+| `static_server_port`           | string  | `8765`    | Port for local HTML serving                           |
 
-### Actionlint
+If the consumer repo already has `lighthouserc.json` or `lighthouserc.js`, that
+config is used instead of the generated accessibility-only defaults.
 
-Actionlint statically checks GitHub Actions workflow files for common errors
-and best practices. It checks the following file types:
+## Supported linters (Suite 1)
 
-- GitHub Actions workflow files (`.yml`, `.yaml` in `.github/workflows/`)
-- GitHub Actions action files (`.yml`, `.yaml` in `.github/actions/`)
+| Tool              | Files                                  | Notes                                             |
+| ----------------- | -------------------------------------- | ------------------------------------------------- |
+| **Actionlint**    | `.github/workflows`, `.github/actions` | GitHub Actions-specific rules                     |
+| **EditorConfig**  | Changed text files                     | Uses `ec`; respects `.editorconfig`               |
+| **ESLint**        | `.js`, `.jsx`, `.ts`, `.tsx`           | Installs `npm ci` when `package.json` exists      |
+| **golangci-lint** | Go packages                            | `--new-from-rev` on PR diff                       |
+| **Hadolint**      | `Dockerfile`, `*.dockerfile`           | Dockerfile best practices                         |
+| **jq**            | `.json`                                | Syntax validation (`jq -e`)                       |
+| **Markdownlint**  | `.md`, `.markdown`                     | markdownlint-cli2                                 |
+| **Prettier**      | JS/TS, JSON, CSS, MD                   | Format check; honors `.prettierignore` (not YAML) |
+| **Ruff**          | `.py`, `.pyw`                          | Python lint                                       |
+| **ShellCheck**    | `.sh`, `.bash`, `.zsh`                 | Shell analysis (runner image binary)              |
+| **shfmt**         | `.sh`, `.bash`, `.zsh`                 | Shell formatting (`-d`)                           |
+| **StyLua**        | Lua (via `stylua_args`)                | Whole-tree or path-scoped                         |
+| **Taplo**         | `.toml`                                | TOML lint                                         |
+| **typos**         | `.md`, `.txt`, `.rst`, `.html`, …      | Prose spell check; uses your repo’s `typos.toml`  |
+| **Yamllint**      | `.yml`, `.yaml`                        | General YAML lint                                 |
 
-Actionlint will fail if it detects any issues in GitHub Actions workflow files,
-helping to catch potential errors before they reach production.
+### typos.toml in consumer repositories
 
-### ESLint
+When `typos_run: true`, the job checks out **your** repository and runs `typos` from
+its root. Your `typos.toml` (or `_typos.toml` / `.typos.toml`) is loaded automatically
+so you can allow names, product terms, and other valid words:
 
-ESLint statically analyzes JavaScript and TypeScript code to find problems and
-enforce code quality standards. It checks the following file types:
+```toml
+[default.extend-words]
+Patten = "Patten"
+MyProduct = "MyProduct"
+```
 
-- JavaScript (`.js`, `.jsx`)
-- TypeScript (`.ts`, `.tsx`)
+Copy [docs/typos.toml.example](./docs/typos.toml.example) as a starting point. For a
+config file outside the root, pass `typos_config: path/to/typos.toml` in the workflow
+`with:` block.
 
-ESLint will fail if it detects any linting errors or rule violations in the
-code. The workflow will use a local ESLint configuration if one exists in the
-repository (via `.eslintrc.*`, `eslint.config.*`, or `package.json`), otherwise
-it will use ESLint's default configuration. If the repository has a
-`package.json` file, dependencies will be installed before running ESLint to
-ensure any ESLint plugins or configurations are available.
+### Intentional overlap (not redundant)
 
-### Hadolint
+- **jq** validates JSON syntax; **Prettier** enforces formatting — enable both for JSON-heavy repos.
+- **Markdownlint** enforces Markdown style; **Prettier** formats Markdown — complementary.
+- **Yamllint** owns YAML formatting and lint; **Prettier** does not format `.yml`/`.yaml`
+  in this workflow (they conflict on quote style and wrapping).
+- **Actionlint** targets GitHub Actions semantics; **Yamllint** covers all YAML — use both for workflows.
+- **ShellCheck** finds shell bugs; **shfmt** enforces layout — complementary.
 
-Hadolint is a Dockerfile linter that checks Dockerfiles for best practices and
-common mistakes. It checks the following file types:
+### What we deliberately omit
 
-- Dockerfiles (`Dockerfile`, `.dockerfile`)
+Tools that duplicate Ruff/ESLint/Prettier for the same languages (e.g. Flake8, Black,
+Biome-as-full-replacement) or need heavy language SDKs (RuboCop, Clippy, `terraform validate`)
+are out of scope so the workflow stays maintainable. Open an issue if you need a
+narrow, high-signal addition.
 
-Hadolint will fail if it detects any issues in Dockerfiles, helping to catch
-potential security vulnerabilities and best practice violations before
-deployment.
+## Accessibility (Suite 2)
 
-### jq
+| Job            | Tool                                                           | When to use                                                     |
+| -------------- | -------------------------------------------------------------- | --------------------------------------------------------------- |
+| **axe-core**   | [@axe-core/cli](https://www.npmjs.com/package/@axe-core/cli)   | WCAG checks; CI syncs ChromeDriver via `browser-driver-manager` |
+| **Lighthouse** | [Lighthouse CI](https://github.com/GoogleChrome/lighthouse-ci) | Accessibility category score gate on deployed URLs              |
 
-jq is a lightweight and flexible command-line JSON processor. When used with
-the `-e` flag, it validates JSON syntax. It checks the following file types:
+### Typical patterns
 
-- JSON files (`.json`)
+- **Static site / docs**: set `axe_run: true` and rely on changed `.html` plus
+  optional `local_html_paths`.
+- **Web app with preview**: pass the preview URL in `urls` for both axe and
+  Lighthouse.
+- **Production smoke**: `urls` only, on a schedule or after deploy (call the
+  reusable workflow from `workflow_dispatch` or `deployment_status`).
 
-The job uses the `jq` binary from the GitHub-hosted Ubuntu runner image (no
-extra install step). jq will fail if it detects any syntax errors in JSON
-files. The `jq -e .` command reads the JSON file and exits with a non-zero
-status code if the JSON is invalid, making it an effective JSON validator.
+## Related projects
 
-### Markdownlint
+- [Security Guardrails](https://github.com/garretpatten/security-guardrails) —
+  companion repo for SAST, secrets, and supply-chain checks.
 
-Markdownlint-cli2 is a fast and flexible Markdown linter that checks Markdown
-files for style and formatting issues. It checks the following file types:
+## Contributing
 
-- Markdown files (`.md`, `.markdown`)
+See [CONTRIBUTING.md](./CONTRIBUTING.md). Security reports: [SECURITY.md](./SECURITY.md).
+Conduct: [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md).
 
-Markdownlint-cli2 will fail if it detects any linting errors or rule violations
-in Markdown files. The workflow will use a local Markdownlint configuration if
-one exists in the repository (via `.markdownlint.json`, `.markdownlint.yaml`,
-`.markdownlint.yml`, or `package.json`), otherwise it will use Markdownlint's
-default configuration.
+## License
 
-### Prettier
-
-Prettier checks code formatting for the following file types:
-
-- JavaScript (`.js`, `.jsx`)
-- TypeScript (`.ts`, `.tsx`)
-- JSON (`.json`)
-- CSS/SCSS (`.css`, `.scss`)
-- Markdown (`.md`)
-- YAML (`.yml`, `.yaml`)
-
-The job runs from the repository root. Prettier uses its normal ignore
-resolution: it discovers `.prettierignore` and `.gitignore` by walking up from
-each file path, so a consuming repo’s root `.prettierignore` (or one in a parent
-of a changed file) applies the same way as when you run Prettier locally.
-Changed paths are checked in one `prettier --check` run with
-`--no-error-on-unmatched-pattern` so paths Prettier excludes (for example under
-`node_modules`) do not fail the job. It does not modify files, only reports
-formatting issues.
-
-### Ruff
-
-Ruff is a fast Python linter and code formatter that checks Python code for
-errors, style issues, and potential bugs. It checks the following file types:
-
-- Python scripts (`.py`)
-- Python wheel scripts (`.pyw`)
-
-Ruff will fail if it detects any linting errors or rule violations in the Python
-code. The workflow will use a local Ruff configuration if one exists in the
-repository (via `ruff.toml`, `pyproject.toml`, or `.ruff.toml`), otherwise it
-will use Ruff's default configuration.
-
-### ShellCheck
-
-ShellCheck analyzes shell scripts for common errors and best practices. It
-checks the following file types:
-
-- Shell scripts (`.sh`)
-- Bash scripts (`.bash`)
-- Zsh scripts (`.zsh`)
-
-The job uses the `shellcheck` binary from the GitHub-hosted Ubuntu runner
-image (no extra install step). ShellCheck will fail if it detects any issues in
-the shell scripts, helping to catch potential bugs and security issues before
-they reach production.
-
-### StyLua
-
-StyLua is a formatter for Lua. Enable it with `stylua_run: true`. By default
-the workflow runs `stylua --check .` at the repository root; override with
-`stylua_args` (for example `--check config/nvim` for Neovim-only trees) and
-optionally `stylua_version`.
-
-### Taplo
-
-Taplo is a fast and feature-complete TOML toolkit that includes a linter for
-TOML files. It checks the following file types:
-
-- TOML files (`.toml`)
-
-Taplo will fail if it detects any syntax errors or linting issues in TOML
-files. The workflow will use a local Taplo configuration if one exists in the
-repository (via `taplo.toml` or `pyproject.toml`), otherwise it will use Taplo's
-default configuration.
-
-### Yamllint
-
-Yamllint is a linter for YAML files that checks for syntax validity, key
-repetition, and cosmetic problems. It checks the following file types:
-
-- YAML files (`.yml`, `.yaml`)
-
-Yamllint will fail if it detects any syntax errors or linting issues in YAML
-files. The workflow will use a local Yamllint configuration if one exists in
-the repository (via `.yamllint`, `.yamllint.yml`, or `.yamllint.yaml`),
-otherwise it will use Yamllint's default configuration.
+[MIT](./LICENSE) — Copyright (c) 2025 Garret Patten

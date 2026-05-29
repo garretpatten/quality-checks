@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-label="Quality Checks">
+  <defs>
+    <linearGradient id="qc" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#10b981"/>
+      <stop offset="100%" stop-color="#047857"/>
+    </linearGradient>
+  </defs>
+  <rect x="12" y="8" width="96" height="104" rx="16" fill="url(#qc)"/>
+  <path
+    fill="none"
+    stroke="#ecfdf5"
+    stroke-width="6"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    d="M36 62 52 78 84 44"
+  />
+  <rect x="32" y="24" width="56" height="8" rx="4" fill="#a7f3d0" opacity="0.9"/>
+  <rect x="32" y="88" width="40" height="8" rx="4" fill="#a7f3d0" opacity="0.7"/>
+</svg>

@@ -1,0 +1,6 @@
+---
+config: .markdownlint.yaml
+globs:
+  - '**/*.md'
+ignores:
+  - node_modules/**

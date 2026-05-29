@@ -21,9 +21,15 @@ on:
         type: string
       node_version:
         description: >
-          Node.js version for ESLint, markdownlint-cli2, and Prettier jobs.
+          Node.js version for ESLint, markdownlint-cli2, Prettier, and
+          accessibility-related installs in sibling workflows.
         required: false
         default: '20'
+        type: string
+      go_version:
+        description: Go toolchain version for golangci-lint.
+        required: false
+        default: 'stable'
         type: string
       stylua_args:
         description: >
@@ -109,6 +115,40 @@ on:
         description: >
           Boolean flag indicating whether the yamllint linter should be
           executed.
+        required: false
+        default: false
+        type: boolean
+      typos_run:
+        description: >
+          Boolean flag indicating whether the typos spell checker should be
+          executed.
+        required: false
+        default: false
+        type: boolean
+      typos_config:
+        description: >
+          Optional path to a typos config file in the consumer repository
+          (e.g. typos.toml). When empty, auto-detects typos.toml, _typos.toml,
+          or .typos.toml at the repository root.
+        required: false
+        default: ''
+        type: string
+      editorconfig_run:
+        description: >
+          Boolean flag indicating whether editorconfig-checker should be
+          executed.
+        required: false
+        default: false
+        type: boolean
+      shfmt_run:
+        description: >
+          Boolean flag indicating whether shfmt should check shell formatting.
+        required: false
+        default: false
+        type: boolean
+      golangci_lint_run:
+        description: >
+          Boolean flag indicating whether golangci-lint should be executed.
         required: false
         default: false
         type: boolean
@@ -531,7 +571,7 @@ jobs:
           mapfile -t CHANGED_FILES < <(
             git diff --name-only --diff-filter=ACMR "${BASE_REF}"...HEAD |
               grep -E \
-                '\.(js|jsx|ts|tsx|json|css|scss|md|yml|yaml)$' || true
+                '\.(js|jsx|ts|tsx|json|css|scss|md|markdown)$' || true
           )
           if [[ ${#CHANGED_FILES[@]} -gt 0 ]] && \
             [[ -n "${CHANGED_FILES[0]}" ]]; then
@@ -870,3 +910,271 @@ jobs:
             exit 0
           fi
           yamllint "${paths[@]}"
+
+  typos:
+    if: ${{ inputs.typos_run == true }}
+    name: 'typos - Spell Checker'
+    runs-on: ubuntu-latest
+    env:
+      QC_TYPOS_CONFIG: ${{ inputs.typos_config }}
+
+    steps:
+      - name: 'Checkout Code'
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
+        with:
+          fetch-depth: 0
+
+      - name: 'Install typos'
+        env:
+          TYPOS_VERSION: v1.47.0
+        run: |
+          set -euo pipefail
+          url="https://github.com/crate-ci/typos/releases/download/${TYPOS_VERSION}/typos-${TYPOS_VERSION}-x86_64-unknown-linux-musl.tar.gz"
+          tmpdir="$(mktemp -d)"
+          curl -fsSL "$url" -o "${tmpdir}/typos.tar.gz"
+          # Archive members are ./typos (GNU tar rejects bare "typos").
+          tar -xzf "${tmpdir}/typos.tar.gz" -C "${tmpdir}"
+          sudo install -m 0755 "${tmpdir}/typos" /usr/local/bin/typos
+          rm -rf "${tmpdir}"
+
+      - name: 'Get changed prose files'
+        id: changed-files
+        run: |
+          set -euo pipefail
+          # shellcheck source=.github/scripts/qc-resolve-base.sh
+          source .github/scripts/qc-resolve-base.sh
+          # Prose only (md, txt, rst, html, LICENSE) — not code or YAML.
+          typos_pat='\.(md|markdown|txt|text|rst|adoc|asciidoc|html)$'
+          license_pat='(^|/)(LICENSE|COPYING|NOTICE)(\.[^/]+)?$'
+          mapfile -t CHANGED_FILES < <(
+            git diff --name-only --diff-filter=ACMR "${BASE_REF}"...HEAD |
+              grep -Ei "(${typos_pat}|${license_pat})" || true
+          )
+          if [[ ${#CHANGED_FILES[@]} -gt 0 ]] && \
+            [[ -n "${CHANGED_FILES[0]}" ]]; then
+            {
+              printf 'files<<EOF\n'
+              printf '%s\n' "${CHANGED_FILES[@]}"
+              printf 'EOF\n'
+              echo 'any_changed=true'
+            } >> "$GITHUB_OUTPUT"
+          else
+            echo 'any_changed=false' >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: 'Run typos'
+        run: |
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
+          if [[ "${{ steps.changed-files.outputs.any_changed }}" != \
+            "true" ]]; then
+            echo 'No changed files to spell-check'
+            exit 0
+          fi
+          readarray -t raw < <(
+            printf '%s\n' "${{ steps.changed-files.outputs.files }}"
+          )
+          paths=()
+          for file in "${raw[@]}"; do
+            [[ -z "${file}" ]] && continue
+            [[ -f "${file}" ]] || continue
+            paths+=( "${file}" )
+          done
+          if [[ ${#paths[@]} -eq 0 ]]; then
+            echo 'No existing paths to check'
+            exit 0
+          fi
+          # shellcheck source=.github/scripts/qc-typos-args.sh
+          source .github/scripts/qc-typos-args.sh
+          if [[ ${#TYPOS_CLI_ARGS[@]} -gt 0 ]]; then
+            echo "Using typos config: ${TYPOS_CLI_ARGS[1]}"
+          else
+            echo 'No typos.toml found; using built-in dictionary only'
+          fi
+          typos "${TYPOS_CLI_ARGS[@]}" "${paths[@]}"
+
+  editorconfig:
+    if: ${{ inputs.editorconfig_run == true }}
+    name: 'EditorConfig - Style Consistency'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 'Checkout Code'
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
+        with:
+          fetch-depth: 0
+
+      - name: 'Install editorconfig-checker'
+        env:
+          EC_VERSION: v3.7.0
+        run: |
+          set -euo pipefail
+          url="https://github.com/editorconfig-checker/editorconfig-checker/releases/download/${EC_VERSION}/ec-linux-amd64.tar.gz"
+          curl -fsSL "$url" -o ec.tar.gz
+          tar -xzf ec.tar.gz bin/ec-linux-amd64
+          sudo mv bin/ec-linux-amd64 /usr/local/bin/ec
+          rm -rf ec.tar.gz bin
+
+      - name: 'Get changed files'
+        id: changed-files
+        run: |
+          set -euo pipefail
+          source .github/scripts/qc-resolve-base.sh
+          mapfile -t CHANGED_FILES < <(
+            git diff --name-only --diff-filter=ACMR "${BASE_REF}"...HEAD || true
+          )
+          if [[ ${#CHANGED_FILES[@]} -gt 0 ]] && \
+            [[ -n "${CHANGED_FILES[0]}" ]]; then
+            {
+              printf 'files<<EOF\n'
+              printf '%s\n' "${CHANGED_FILES[@]}"
+              printf 'EOF\n'
+              echo 'any_changed=true'
+            } >> "$GITHUB_OUTPUT"
+          else
+            echo 'any_changed=false' >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: 'Run editorconfig-checker'
+        run: |
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
+          if [[ "${{ steps.changed-files.outputs.any_changed }}" != \
+            "true" ]]; then
+            echo 'No changed files to check'
+            exit 0
+          fi
+          readarray -t raw < <(
+            printf '%s\n' "${{ steps.changed-files.outputs.files }}"
+          )
+          paths=()
+          for file in "${raw[@]}"; do
+            [[ -z "${file}" ]] && continue
+            [[ -f "${file}" ]] || continue
+            paths+=( "${file}" )
+          done
+          if [[ ${#paths[@]} -eq 0 ]]; then
+            echo 'No existing paths to check'
+            exit 0
+          fi
+          ec "${paths[@]}"
+
+  shfmt:
+    if: ${{ inputs.shfmt_run == true }}
+    name: 'shfmt - Shell Formatter'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 'Checkout Code'
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
+        with:
+          fetch-depth: 0
+
+      - name: 'Install shfmt'
+        env:
+          SHFMT_VERSION: 3.10.0
+        run: |
+          set -euo pipefail
+          url="https://github.com/mvdan/sh/releases/download/v${SHFMT_VERSION}/shfmt_v${SHFMT_VERSION}_linux_amd64"
+          curl -fsSL "$url" -o shfmt
+          chmod +x shfmt
+          sudo mv shfmt /usr/local/bin/
+
+      - name: 'Get changed shell files'
+        id: changed-files
+        run: |
+          set -euo pipefail
+          source .github/scripts/qc-resolve-base.sh
+          mapfile -t CHANGED_FILES < <(
+            git diff --name-only --diff-filter=ACMR "${BASE_REF}"...HEAD |
+              grep -E '\.(sh|bash|zsh)$' || true
+          )
+          if [[ ${#CHANGED_FILES[@]} -gt 0 ]] && \
+            [[ -n "${CHANGED_FILES[0]}" ]]; then
+            {
+              printf 'files<<EOF\n'
+              printf '%s\n' "${CHANGED_FILES[@]}"
+              printf 'EOF\n'
+              echo 'any_changed=true'
+            } >> "$GITHUB_OUTPUT"
+          else
+            echo 'any_changed=false' >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: 'Run shfmt'
+        run: |
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
+          if [[ "${{ steps.changed-files.outputs.any_changed }}" != \
+            "true" ]]; then
+            echo 'No shell files to check'
+            exit 0
+          fi
+          readarray -t raw < <(
+            printf '%s\n' "${{ steps.changed-files.outputs.files }}"
+          )
+          paths=()
+          for file in "${raw[@]}"; do
+            [[ -z "${file}" ]] && continue
+            [[ -f "${file}" ]] || continue
+            paths+=( "${file}" )
+          done
+          if [[ ${#paths[@]} -eq 0 ]]; then
+            echo 'No existing paths to check'
+            exit 0
+          fi
+          shfmt -d "${paths[@]}"
+
+  golangci-lint:
+    if: ${{ inputs.golangci_lint_run == true }}
+    name: 'golangci-lint - Go Linter'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 'Checkout Code'
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
+        with:
+          fetch-depth: 0
+
+      - name: 'Setup Go'
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ inputs.go_version }}
+
+      - name: 'Install golangci-lint'
+        env:
+          GOLANGCI_LINT_VERSION: v2.1.6
+        run: |
+          set -euo pipefail
+          install_url="https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh"
+          curl -fsSL "${install_url}" | \
+            sh -s -- -b "$(go env GOPATH)/bin" "${GOLANGCI_LINT_VERSION}"
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+      - name: 'Get changed Go files'
+        id: changed-files
+        run: |
+          set -euo pipefail
+          source .github/scripts/qc-resolve-base.sh
+          mapfile -t CHANGED_FILES < <(
+            git diff --name-only --diff-filter=ACMR "${BASE_REF}"...HEAD |
+              grep -E '\.go$' || true
+          )
+          if [[ ${#CHANGED_FILES[@]} -gt 0 ]] && \
+            [[ -n "${CHANGED_FILES[0]}" ]]; then
+            echo 'any_changed=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'any_changed=false' >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: 'Run golangci-lint'
+        run: |
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
+          source .github/scripts/qc-resolve-base.sh
+          if [[ "${{ steps.changed-files.outputs.any_changed }}" != \
+            "true" ]]; then
+            echo 'No Go files to check'
+            exit 0
+          fi
+          golangci-lint run --new-from-rev="${BASE_REF}" ./...

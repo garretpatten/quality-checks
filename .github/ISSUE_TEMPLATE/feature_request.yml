@@ -1,0 +1,33 @@
+name: Feature request
+description: New linter, accessibility check, or workflow input
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: >-
+        Describe the quality or accessibility outcome you want and why existing
+        jobs do not cover it. Prefer focused, widely useful additions.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What gap does this fill?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed approach
+      description: Tool, config flags, or workflow input you have in mind.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+    validations:
+      required: false

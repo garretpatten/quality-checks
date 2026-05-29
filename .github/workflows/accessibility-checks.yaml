@@ -1,0 +1,245 @@
+---
+name: Accessibility Checks
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+on:
+  workflow_call:
+    inputs:
+      diff_base:
+        description: >
+          Git ref to diff against (SHA or branch), e.g.
+          github.event.pull_request.base.sha. When empty, uses origin/main,
+          origin/master, or HEAD~1.
+        required: false
+        default: ''
+        type: string
+      node_version:
+        description: Node.js version for axe-core and Lighthouse CI tooling.
+        required: false
+        default: '20'
+        type: string
+      axe_run:
+        description: >
+          Run axe-core accessibility audits (deployed URLs and/or local HTML).
+        required: false
+        default: false
+        type: boolean
+      lighthouse_run:
+        description: >
+          Run Lighthouse CI with an accessibility score gate on `urls`.
+        required: false
+        default: false
+        type: boolean
+      urls:
+        description: >
+          URLs to audit (one per line). Required for Lighthouse when enabled.
+          Also used by axe for deployed previews or production pages.
+        required: false
+        default: ''
+        type: string
+      local_html_paths:
+        description: >
+          Newline-separated repo-relative HTML paths to audit via a local static
+          server (merged with changed `.html` files in the PR diff).
+        required: false
+        default: ''
+        type: string
+      lighthouse_min_accessibility:
+        description: >
+          Minimum Lighthouse accessibility category score (0.0–1.0).
+        required: false
+        default: '0.9'
+        type: string
+      static_server_port:
+        description: Port for the ephemeral static file server.
+        required: false
+        default: '8765'
+        type: string
+
+env:
+  QC_DIFF_BASE: ${{ inputs.diff_base }}
+  QC_STATIC_PORT: ${{ inputs.static_server_port }}
+
+jobs:
+  axe:
+    if: ${{ inputs.axe_run == true }}
+    name: 'axe-core - Accessibility Audit'
+    runs-on: ubuntu-latest
+    env:
+      QC_URLS: ${{ inputs.urls }}
+      QC_LOCAL_HTML_PATHS: ${{ inputs.local_html_paths }}
+
+    steps:
+      - name: 'Checkout Code'
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
+        with:
+          fetch-depth: 0
+
+      - name: 'Setup Node.js'
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node_version }}
+
+      - name: 'Install axe-core and sync ChromeDriver'
+        run: |
+          set -euo pipefail
+          # shellcheck source=.github/scripts/qc-axe-setup.sh
+          source .github/scripts/qc-axe-setup.sh
+
+      - name: 'Collect audit targets'
+        id: targets
+        run: |
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
+          source .github/scripts/qc-resolve-base.sh
+
+          mapfile -t remote_urls < <(
+            printf '%s\n' "${QC_URLS}" |
+              tr ',' '\n' |
+              sed '/^[[:space:]]*$/d' || true
+          )
+
+          mapfile -t extra_html < <(
+            printf '%s\n' "${QC_LOCAL_HTML_PATHS}" |
+              sed '/^[[:space:]]*$/d' || true
+          )
+
+          mapfile -t changed_html < <(
+            git diff --name-only --diff-filter=ACMR "${BASE_REF}"...HEAD |
+              grep -E '\.html?$' || true
+          )
+
+          html_paths=()
+          for path in "${extra_html[@]}" "${changed_html[@]}"; do
+            [[ -z "${path}" ]] && continue
+            [[ -f "${path}" ]] || continue
+            html_paths+=( "${path}" )
+          done
+
+          {
+            printf 'remote_urls<<EOF\n'
+            printf '%s\n' "${remote_urls[@]}"
+            printf 'EOF\n'
+            printf 'html_paths<<EOF\n'
+            printf '%s\n' "${html_paths[@]}"
+            printf 'EOF\n'
+          } >> "$GITHUB_OUTPUT"
+
+          if [[ ${#remote_urls[@]} -eq 0 && ${#html_paths[@]} -eq 0 ]]; then
+            echo 'any_targets=false' >> "$GITHUB_OUTPUT"
+          else
+            echo 'any_targets=true' >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: 'Run axe on remote URLs'
+        if: steps.targets.outputs.any_targets == 'true'
+        env:
+          QC_REMOTE_URLS: ${{ steps.targets.outputs.remote_urls }}
+        run: |
+          set -euo pipefail
+          readarray -t remote_urls < <(printf '%s\n' "${QC_REMOTE_URLS}")
+          for url in "${remote_urls[@]}"; do
+            [[ -z "${url}" ]] && continue
+            echo "Auditing ${url}"
+            axe --chromedriver-path "${CHROMEDRIVER_PATH}" "${url}" --exit
+          done
+
+      - name: 'Run axe on local HTML'
+        if: steps.targets.outputs.any_targets == 'true'
+        env:
+          QC_HTML_PATHS: ${{ steps.targets.outputs.html_paths }}
+        run: |
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
+          readarray -t html_paths < <(printf '%s\n' "${QC_HTML_PATHS}")
+          if [[ ${#html_paths[@]} -eq 0 ]] || [[ -z "${html_paths[0]}" ]]; then
+            exit 0
+          fi
+          npx --yes serve@14.2.6 -l "${QC_STATIC_PORT}" --no-clipboard . &
+          server_pid=$!
+          cleanup() {
+            kill "${server_pid}" 2>/dev/null || true
+          }
+          trap cleanup EXIT
+          sleep 2
+          for path in "${html_paths[@]}"; do
+            [[ -z "${path}" ]] && continue
+            url="http://127.0.0.1:${QC_STATIC_PORT}/${path}"
+            echo "Auditing ${url}"
+            axe --chromedriver-path "${CHROMEDRIVER_PATH}" "${url}" --exit
+          done
+
+      - name: 'No audit targets'
+        if: steps.targets.outputs.any_targets != 'true'
+        run: |
+          echo 'No URLs or HTML paths to audit.'
+          echo 'Set urls and/or local_html_paths,'
+          echo 'or change HTML in the PR.'
+
+  lighthouse:
+    if: ${{ inputs.lighthouse_run == true }}
+    name: 'Lighthouse - Accessibility Audit'
+    runs-on: ubuntu-latest
+    env:
+      QC_URLS: ${{ inputs.urls }}
+      QC_LHCI_MIN_SCORE: ${{ inputs.lighthouse_min_accessibility }}
+
+    steps:
+      - name: 'Checkout Code'
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
+
+      - name: 'Validate URLs'
+        id: urls
+        run: |
+          set -euo pipefail
+          mapfile -t urls < <(
+            printf '%s\n' "${QC_URLS}" |
+              tr ',' '\n' |
+              sed '/^[[:space:]]*$/d' || true
+          )
+          if [[ ${#urls[@]} -eq 0 ]] || [[ -z "${urls[0]}" ]]; then
+            echo "Lighthouse requires at least one URL in urls."
+            exit 1
+          fi
+          {
+            printf 'list<<EOF\n'
+            printf '%s\n' "${urls[@]}"
+            printf 'EOF\n'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: 'Write Lighthouse CI config'
+        run: |
+          set -euo pipefail
+          if [[ -f lighthouserc.json ]] || [[ -f lighthouserc.js ]]; then
+            echo 'Using repository Lighthouse CI config'
+            exit 0
+          fi
+          jq -n --argjson min "${QC_LHCI_MIN_SCORE}" \
+            '{
+              ci: {
+                collect: {
+                  numberOfRuns: 1,
+                  settings: {onlyCategories: ["accessibility"]}
+                },
+                assert: {
+                  assertions: {
+                    "categories:accessibility": ["error", {minScore: $min}]
+                  }
+                }
+              }
+            }' > lighthouserc.json
+
+      - name: 'Run Lighthouse CI'
+        # yamllint disable-line rule:line-length
+        uses: treosh/lighthouse-ci-action@0b7bcdffda3ec1e1c81a3019ef427c4bac475e3f
+        with:
+          urls: |
+            ${{ steps.urls.outputs.list }}
+          uploadArtifacts: true
+          temporaryPublicStorage: true
