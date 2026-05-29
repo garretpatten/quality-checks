@@ -54,28 +54,12 @@ filter_existing() {
 	done
 }
 
-run_prettier_md() {
-	local -a files=()
-	local file
-	for file in "${changed[@]}"; do
-		[[ "${file}" == *.md ]] && files+=("${file}")
-	done
-	mapfile -t files < <(filter_existing "${files[@]}")
-	[[ ${#files[@]} -eq 0 ]] && return 0
-	echo '→ prettier (markdown)'
-	npx prettier --check "${files[@]}"
-}
-
-run_markdownlint() {
-	local -a files=()
-	local file
-	for file in "${changed[@]}"; do
-		[[ "${file}" == *.md ]] && files+=("${file}")
-	done
-	mapfile -t files < <(filter_existing "${files[@]}")
-	[[ ${#files[@]} -eq 0 ]] && return 0
-	echo '→ markdownlint-cli2'
-	npx markdownlint-cli2 "${files[@]}"
+# Required on every run: Prettier then markdownlint on all Markdown (CI parity).
+run_docs_gate() {
+	echo '→ prettier (all Markdown)'
+	npx prettier --check "**/*.md"
+	echo '→ markdownlint-cli2 (all Markdown)'
+	npm run lint:md
 }
 
 run_yamllint() {
@@ -208,8 +192,6 @@ main() {
 		npm install
 	fi
 
-	run_prettier_md
-	run_markdownlint
 	run_prettier_other
 	run_yamllint
 	run_actionlint
@@ -218,6 +200,7 @@ main() {
 	run_typos
 	run_editorconfig
 	run_axe_fixture
+	run_docs_gate
 
 	echo 'All applicable linters passed.'
 }

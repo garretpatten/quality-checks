@@ -22,10 +22,11 @@ updating a PR. See **[AGENTS.md](./AGENTS.md)** for the full matrix.
 
 ```bash
 npm install
+npm run fix:docs
 npm run lint:changed
 ```
 
-For a full-repo pass (or when many areas changed):
+`fix:docs` formats and lints **all** Markdown (required on every PR). For a full Suite 1 pass:
 
 ```bash
 npm run lint

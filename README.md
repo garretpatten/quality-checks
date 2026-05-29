@@ -241,10 +241,10 @@ narrow, high-signal addition.
 
 ## Accessibility (Suite 2)
 
-| Job            | Tool                                                           | When to use                                                |
-| -------------- | -------------------------------------------------------------- | ---------------------------------------------------------- |
+| Job            | Tool                                                           | When to use                                                     |
+| -------------- | -------------------------------------------------------------- | --------------------------------------------------------------- |
 | **axe-core**   | [@axe-core/cli](https://www.npmjs.com/package/@axe-core/cli)   | WCAG checks; CI syncs ChromeDriver via `browser-driver-manager` |
-| **Lighthouse** | [Lighthouse CI](https://github.com/GoogleChrome/lighthouse-ci) | Accessibility category score gate on deployed URLs         |
+| **Lighthouse** | [Lighthouse CI](https://github.com/GoogleChrome/lighthouse-ci) | Accessibility category score gate on deployed URLs              |
 
 ### Typical patterns
 

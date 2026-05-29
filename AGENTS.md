@@ -47,55 +47,61 @@ Optional tools (**editorconfig**, **shfmt**) must not rewrite Markdown or YAML.
 
 ## Verify before you finish (required)
 
-**You must run linters that apply to every file you changed before finalizing work**
-(summary, handoff, or commit). Do not skip this step.
+**You must run Prettier and markdownlint on every task in this repository**, even when
+you only changed workflows or scripts. Tables and README badges drift easily; CI always
+checks all Markdown.
 
-### Preferred: changed-files script
+### 1. Format and lint Markdown (always)
 
 From the repository root:
 
 ```bash
 npm install
+npm run fix:docs
+```
+
+`fix:docs` runs `prettier --write` on all `**/*.md`, then `markdownlint-cli2`. To check
+without writing:
+
+```bash
+npm run lint:docs
+```
+
+### 2. Other linters for files you touched
+
+```bash
 ./scripts/lint-changed.sh
 ```
 
-This runs only the checks relevant to your diff (vs `origin/master` / `origin/main`,
-plus unstaged and staged changes). Override the base ref:
+Or the full Suite 1 pass:
+
+```bash
+npm run lint
+```
+
+`lint-changed.sh` ends with the same Prettier + markdownlint gate on all Markdown.
+
+Override the git base for changed-file detection:
 
 ```bash
 LINT_BASE=origin/main ./scripts/lint-changed.sh
 ```
 
-Or via npm:
+### If you edited … also run …
 
-```bash
-npm run lint:changed
-```
-
-### Full repo lint (when unsure or many file types changed)
-
-```bash
-npm install
-npm run lint
-```
-
-### If you edited … run …
-
-| Paths you changed                                                                  | Required local checks                                                     |
-| ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| Any `*.md`                                                                         | `npx prettier --check <files>` then `npm run lint:md` (or `npm run lint`) |
-| `.github/workflows/*.yaml`, `test-workflow.yaml`                                   | `npm run lint:yaml`, `npm run lint:workflows`                             |
-| `.github/ISSUE_TEMPLATE/**`, `dependabot.yaml`, `.yamllint`, `.markdownlint*.yaml` | `npm run lint:yaml`                                                       |
-| `.github/scripts/*.sh`, `scripts/*.sh`                                             | `npm run lint:shell`, `shellcheck <files>`                                |
-| `*.html`                                                                           | `./scripts/lint-changed.sh` (axe if CLI installed) or rely on CI Suite 2  |
-| `package.json`, `package-lock.json`                                                | `npm run lint`                                                            |
-| Workflow inputs / README tables                                                    | Keep **README.md** and workflow `inputs` in sync; run `npm run lint`      |
+| Paths you changed                                                                  | Additional checks                                          |
+| ---------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| `.github/workflows/*.yaml`, `test-workflow.yaml`                                   | `npm run lint:yaml`, `npm run lint:workflows`              |
+| `.github/ISSUE_TEMPLATE/**`, `dependabot.yaml`, `.yamllint`, `.markdownlint*.yaml` | `npm run lint:yaml`                                        |
+| `.github/scripts/*.sh`, `scripts/*.sh`                                             | `npm run lint:shell`, `shellcheck <files>`                 |
+| `*.html`                                                                           | axe via `lint-changed.sh` (optional locally) or CI Suite 2 |
+| Workflow inputs / README tables                                                    | Keep **README.md** and workflow `inputs` in sync           |
 
 ### Suite mapping (CI vs local)
 
 | Suite                 | CI workflow                                   | Local equivalent                                                                                                      |
 | --------------------- | --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| **1 — Linters**       | `test-workflow` → `quality-checks.yaml`       | `npm run lint`, `./scripts/lint-changed.sh`                                                                           |
+| **1 — Linters**       | `test-workflow` → `quality-checks.yaml`       | `npm run lint` (includes `lint:docs`)                                                                                 |
 | **2 — Accessibility** | `test-workflow` → `accessibility-checks.yaml` | axe on changed `.html` via `lint-changed.sh`; Lighthouse needs deployed `urls` (CI only unless you pass URLs locally) |
 
 ### Tool install (if a script reports “skipped”)
@@ -112,7 +118,8 @@ npm run lint
 
 ### Checklist before handoff
 
-- [ ] `./scripts/lint-changed.sh` (or `npm run lint:changed`) exits 0
+- [ ] **`npm run fix:docs`** exits 0 (or `npm run lint:docs` if you did not need to write)
+- [ ] **`npm run lint`** or **`./scripts/lint-changed.sh`** exits 0 when you changed workflows, shell, or config
 - [ ] If workflows or inputs changed, README tables updated
 - [ ] New third-party actions use full commit SHAs
 - [ ] No secrets or personal data in logs or fixtures
