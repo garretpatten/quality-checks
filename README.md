@@ -1,5 +1,3 @@
-<!-- markdownlint-disable MD033 MD041 -->
-
 <p align="center">
     <img
         src="./docs/assets/quality-checks-mark.svg"
@@ -61,8 +59,6 @@
     ✓ Consumer-friendly inputs &nbsp;
     ✓ MIT licensed
 </p>
-
-<!-- markdownlint-enable MD033 MD041 -->
 
 ---
 
@@ -192,29 +188,30 @@ config is used instead of the generated accessibility-only defaults.
 
 ## Supported linters (Suite 1)
 
-| Tool              | Files                                  | Notes                                        |
-| ----------------- | -------------------------------------- | -------------------------------------------- |
-| **Actionlint**    | `.github/workflows`, `.github/actions` | GitHub Actions-specific rules                |
-| **EditorConfig**  | Changed text files                     | Uses `ec`; respects `.editorconfig`          |
-| **ESLint**        | `.js`, `.jsx`, `.ts`, `.tsx`           | Installs `npm ci` when `package.json` exists |
-| **golangci-lint** | Go packages                            | `--new-from-rev` on PR diff                  |
-| **Hadolint**      | `Dockerfile`, `*.dockerfile`           | Dockerfile best practices                    |
-| **jq**            | `.json`                                | Syntax validation (`jq -e`)                  |
-| **Markdownlint**  | `.md`, `.markdown`                     | markdownlint-cli2                            |
-| **Prettier**      | JS/TS, JSON, CSS, MD, YAML             | Format check; honors `.prettierignore`       |
-| **Ruff**          | `.py`, `.pyw`                          | Python lint                                  |
-| **ShellCheck**    | `.sh`, `.bash`, `.zsh`                 | Shell analysis (runner image binary)         |
-| **shfmt**         | `.sh`, `.bash`, `.zsh`                 | Shell formatting (`-d`)                      |
-| **StyLua**        | Lua (via `stylua_args`)                | Whole-tree or path-scoped                    |
-| **Taplo**         | `.toml`                                | TOML lint                                    |
-| **typos**         | Changed non-binary files               | Spell checker; add `typos.toml` to tune      |
-| **Yamllint**      | `.yml`, `.yaml`                        | General YAML lint                            |
+| Tool              | Files                                  | Notes                                             |
+| ----------------- | -------------------------------------- | ------------------------------------------------- |
+| **Actionlint**    | `.github/workflows`, `.github/actions` | GitHub Actions-specific rules                     |
+| **EditorConfig**  | Changed text files                     | Uses `ec`; respects `.editorconfig`               |
+| **ESLint**        | `.js`, `.jsx`, `.ts`, `.tsx`           | Installs `npm ci` when `package.json` exists      |
+| **golangci-lint** | Go packages                            | `--new-from-rev` on PR diff                       |
+| **Hadolint**      | `Dockerfile`, `*.dockerfile`           | Dockerfile best practices                         |
+| **jq**            | `.json`                                | Syntax validation (`jq -e`)                       |
+| **Markdownlint**  | `.md`, `.markdown`                     | markdownlint-cli2                                 |
+| **Prettier**      | JS/TS, JSON, CSS, MD                   | Format check; honors `.prettierignore` (not YAML) |
+| **Ruff**          | `.py`, `.pyw`                          | Python lint                                       |
+| **ShellCheck**    | `.sh`, `.bash`, `.zsh`                 | Shell analysis (runner image binary)              |
+| **shfmt**         | `.sh`, `.bash`, `.zsh`                 | Shell formatting (`-d`)                           |
+| **StyLua**        | Lua (via `stylua_args`)                | Whole-tree or path-scoped                         |
+| **Taplo**         | `.toml`                                | TOML lint                                         |
+| **typos**         | `.md`, `.txt`, `.rst`, `.html`, …      | Prose spell check only; not code or YAML          |
+| **Yamllint**      | `.yml`, `.yaml`                        | General YAML lint                                 |
 
 ### Intentional overlap (not redundant)
 
 - **jq** validates JSON syntax; **Prettier** enforces formatting — enable both for JSON-heavy repos.
 - **Markdownlint** enforces Markdown style; **Prettier** formats Markdown — complementary.
-- **Yamllint** checks YAML structure and style; **Prettier** formats YAML — complementary.
+- **Yamllint** owns YAML formatting and lint; **Prettier** does not format `.yml`/`.yaml`
+  in this workflow (they conflict on quote style and wrapping).
 - **Actionlint** targets GitHub Actions semantics; **Yamllint** covers all YAML — use both for workflows.
 - **ShellCheck** finds shell bugs; **shfmt** enforces layout — complementary.
 

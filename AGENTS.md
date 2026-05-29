@@ -30,6 +30,20 @@ SHAs** for third-party actions.
 
 Do not commit unless the user asks.
 
+## Linter ownership (avoid conflicts)
+
+These three tools are canonical; others must not fight them:
+
+| Tool             | Owns                                   | Does not run on                                            |
+| ---------------- | -------------------------------------- | ---------------------------------------------------------- |
+| **Prettier**     | Markdown, JSON, HTML, JS/TS, CSS       | `*.yaml` / `*.yml` (see `.prettierignore`)                 |
+| **markdownlint** | Markdown structure and semantics       | Line length, raw HTML badges (`MD013`/`MD033`/`MD041` off) |
+| **yamllint**     | All YAML under `.github/`, config YAML | —                                                          |
+
+Run **Prettier before markdownlint** on Markdown. Never run Prettier on YAML in this
+repo. **typos** runs on Markdown/plain-text/docs only (not YAML, code, or JSON).
+Optional tools (**editorconfig**, **shfmt**) must not rewrite Markdown or YAML.
+
 ## Verify before you finish (required)
 
 **You must run linters that apply to every file you changed before finalizing work**
@@ -66,17 +80,15 @@ npm run lint
 
 ### If you edited … run …
 
-| Paths you changed                                                                  | Required local checks                                                       |
-| ---------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| Any `*.md` (except policy files below)                                             | `npm run lint:md`, Prettier on those files (`npx prettier --check <files>`) |
-| `README.md` only                                                                   | `npm run lint:md`, `npm run format:check` on `README.md`                    |
-| `CODE_OF_CONDUCT.md`, `CONTRIBUTING.md`, `SECURITY.md`                             | Prettier only (excluded from markdownlint)                                  |
-| `.github/workflows/*.yaml`, `test-workflow.yaml`                                   | `npm run lint:yaml`, `npm run lint:workflows`                               |
-| `.github/ISSUE_TEMPLATE/**`, `dependabot.yaml`, `.yamllint`, `.markdownlint*.yaml` | `npm run lint:yaml`                                                         |
-| `.github/scripts/*.sh`, `scripts/*.sh`                                             | `npm run lint:shell`, `shellcheck <files>`                                  |
-| `*.html`                                                                           | `./scripts/lint-changed.sh` (axe if CLI installed) or rely on CI Suite 2    |
-| `package.json`, `package-lock.json`                                                | `npm run lint`                                                              |
-| Workflow inputs / README tables                                                    | Keep **README.md** and workflow `inputs` in sync; run `npm run lint`        |
+| Paths you changed                                                                  | Required local checks                                                     |
+| ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| Any `*.md`                                                                         | `npx prettier --check <files>` then `npm run lint:md` (or `npm run lint`) |
+| `.github/workflows/*.yaml`, `test-workflow.yaml`                                   | `npm run lint:yaml`, `npm run lint:workflows`                             |
+| `.github/ISSUE_TEMPLATE/**`, `dependabot.yaml`, `.yamllint`, `.markdownlint*.yaml` | `npm run lint:yaml`                                                       |
+| `.github/scripts/*.sh`, `scripts/*.sh`                                             | `npm run lint:shell`, `shellcheck <files>`                                |
+| `*.html`                                                                           | `./scripts/lint-changed.sh` (axe if CLI installed) or rely on CI Suite 2  |
+| `package.json`, `package-lock.json`                                                | `npm run lint`                                                            |
+| Workflow inputs / README tables                                                    | Keep **README.md** and workflow `inputs` in sync; run `npm run lint`      |
 
 ### Suite mapping (CI vs local)
 
@@ -91,7 +103,7 @@ npm run lint
 | ------------------------------- | ----------------------------------------------------------------------------------------------------------- |
 | **actionlint**                  | `brew install actionlint`                                                                                   |
 | **yamllint**                    | `pip install yamllint`                                                                                      |
-| **shfmt**                       | `brew install shfmt`                                                                                          |
+| **shfmt**                       | `brew install shfmt`                                                                                        |
 | **shellcheck**                  | `brew install shellcheck`                                                                                   |
 | **typos**                       | `brew install typos-cli`                                                                                    |
 | **editorconfig-checker** (`ec`) | [releases](https://github.com/editorconfig-checker/editorconfig-checker/releases) (`ec-linux-amd64` binary) |

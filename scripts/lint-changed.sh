@@ -70,11 +70,7 @@ run_markdownlint() {
 	local -a files=()
 	local file
 	for file in "${changed[@]}"; do
-		[[ "${file}" == *.md ]] || continue
-		case "${file}" in
-		CODE_OF_CONDUCT.md | CONTRIBUTING.md | SECURITY.md) continue ;;
-		esac
-		files+=("${file}")
+		[[ "${file}" == *.md ]] && files+=("${file}")
 	done
 	mapfile -t files < <(filter_existing "${files[@]}")
 	[[ ${#files[@]} -eq 0 ]] && return 0
@@ -127,20 +123,18 @@ run_shellcheck() {
 }
 
 run_typos() {
-	if ! command -v typos >/dev/null 2>&1; then
-		has_pattern '.' || return 0
-		echo '→ typos (skipped — install: brew install typos-cli)'
-		return 0
-	fi
 	local -a files=()
 	local file
 	for file in "${changed[@]}"; do
-		[[ "${file}" =~ \.(png|jpe?g|gif|webp|ico|svg|woff2?|ttf|eot|pdf|zip|gz|tar|bin|exe|dll|so|dylib|lock)$ ]] && continue
-		[[ "${file}" =~ (^|/)(node_modules|vendor|dist|build|\.git)/ ]] && continue
-		files+=("${file}")
+		[[ "${file}" =~ \.(md|markdown|txt|text|rst|adoc|asciidoc|html)$ ]] && files+=("${file}")
+		[[ "${file}" =~ (^|/)(LICENSE|COPYING|NOTICE)(\.[^/]+)?$ ]] && files+=("${file}")
 	done
-	mapfile -t files < <(filter_existing "${files[@]}")
+	mapfile -t files < <(filter_existing "${files[@]}" | sort -u)
 	[[ ${#files[@]} -eq 0 ]] && return 0
+	if ! command -v typos >/dev/null 2>&1; then
+		echo '→ typos (skipped — install: brew install typos-cli)'
+		return 0
+	fi
 	echo '→ typos'
 	typos "${files[@]}"
 }
@@ -185,7 +179,7 @@ run_prettier_other() {
 	local -a files=()
 	local file
 	for file in "${changed[@]}"; do
-		[[ "${file}" =~ \.(json|ya?ml|css|scss|js|jsx|ts|tsx)$ ]] && files+=("${file}")
+		[[ "${file}" =~ \.(json|css|scss|js|jsx|ts|tsx)$ ]] && files+=("${file}")
 	done
 	mapfile -t files < <(filter_existing "${files[@]}")
 	[[ ${#files[@]} -eq 0 ]] && return 0
@@ -200,8 +194,8 @@ main() {
 	fi
 
 	run_prettier_md
-	run_prettier_other
 	run_markdownlint
+	run_prettier_other
 	run_yamllint
 	run_actionlint
 	run_shfmt

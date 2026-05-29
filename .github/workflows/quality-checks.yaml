@@ -563,7 +563,7 @@ jobs:
           mapfile -t CHANGED_FILES < <(
             git diff --name-only --diff-filter=ACMR "${BASE_REF}"...HEAD |
               grep -E \
-                '\.(js|jsx|ts|tsx|json|css|scss|md|yml|yaml)$' || true
+                '\.(js|jsx|ts|tsx|json|css|scss|md|markdown)$' || true
           )
           if [[ ${#CHANGED_FILES[@]} -gt 0 ]] && \
             [[ -n "${CHANGED_FILES[0]}" ]]; then
@@ -927,18 +927,18 @@ jobs:
           sudo install -m 0755 "${tmpdir}/typos" /usr/local/bin/typos
           rm -rf "${tmpdir}"
 
-      - name: 'Get changed text files'
+      - name: 'Get changed prose files'
         id: changed-files
         run: |
           set -euo pipefail
           # shellcheck source=.github/scripts/qc-resolve-base.sh
           source .github/scripts/qc-resolve-base.sh
+          # Prose only (md, txt, rst, html, LICENSE) — not code or YAML.
+          typos_pat='\.(md|markdown|txt|text|rst|adoc|asciidoc|html)$'
+          license_pat='(^|/)(LICENSE|COPYING|NOTICE)(\.[^/]+)?$'
           mapfile -t CHANGED_FILES < <(
             git diff --name-only --diff-filter=ACMR "${BASE_REF}"...HEAD |
-              grep -Eiv '\.(png|jpe?g|gif|webp|ico|svg)$' |
-              grep -Eiv '\.(woff2?|ttf|eot|pdf|zip|gz|tar)$' |
-              grep -Eiv '\.(bin|exe|dll|so|dylib|lock)$' |
-              grep -Ev '(^|/)(node_modules|vendor|dist|build|\.git)/' || true
+              grep -Ei "(${typos_pat}|${license_pat})" || true
           )
           if [[ ${#CHANGED_FILES[@]} -gt 0 ]] && \
             [[ -n "${CHANGED_FILES[0]}" ]]; then

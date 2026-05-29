@@ -5,3 +5,6 @@ coverage
 package-lock.json
 *.min.js
 *.snap
+
+# YAML is owned by yamllint (Prettier and yamllint fight over quotes/wrapping).
+**/*.{yaml,yml}
