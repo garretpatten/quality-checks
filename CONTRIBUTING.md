@@ -35,5 +35,8 @@ Install optional tools listed in **AGENTS.md** when `lint-changed` reports a ski
 **`npm run lint`** mirrors CI **Suite 1 — Linters**; Suite 2 (accessibility) runs in
 CI via `test-workflow.yaml`.
 
+Shell script changes require **shfmt** and **shellcheck** (`brew install shfmt shellcheck`,
+or `npm run lint:shell` after installing shfmt).
+
 Documentation-only changes still need **Prettier** and **Markdownlint** on touched
 Markdown files.

@@ -920,10 +920,12 @@ jobs:
         run: |
           set -euo pipefail
           url="https://github.com/crate-ci/typos/releases/download/${TYPOS_VERSION}/typos-${TYPOS_VERSION}-x86_64-unknown-linux-musl.tar.gz"
-          curl -fsSL "$url" -o typos.tar.gz
-          tar -xzf typos.tar.gz typos
-          sudo mv typos /usr/local/bin/
-          rm typos.tar.gz
+          tmpdir="$(mktemp -d)"
+          curl -fsSL "$url" -o "${tmpdir}/typos.tar.gz"
+          # Archive members are ./typos (GNU tar rejects bare "typos").
+          tar -xzf "${tmpdir}/typos.tar.gz" -C "${tmpdir}"
+          sudo install -m 0755 "${tmpdir}/typos" /usr/local/bin/typos
+          rm -rf "${tmpdir}"
 
       - name: 'Get changed text files'
         id: changed-files

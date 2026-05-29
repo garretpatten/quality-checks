@@ -7,7 +7,8 @@
     "lint:changed": "./scripts/lint-changed.sh",
     "lint:md": "markdownlint-cli2 \"**/*.md\" \"#node_modules\" \"#CODE_OF_CONDUCT.md\" \"#CONTRIBUTING.md\" \"#SECURITY.md\"",
     "lint:yaml": "yamllint .github .yamllint .markdownlint.yaml",
-    "lint:workflows": "actionlint"
+    "lint:workflows": "actionlint",
+    "lint:shell": "shfmt -d .github/scripts/*.sh scripts/*.sh"
   },
   "devDependencies": {
     "markdownlint-cli2": "^0.18.1",

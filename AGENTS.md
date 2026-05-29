@@ -73,7 +73,7 @@ npm run lint
 | `CODE_OF_CONDUCT.md`, `CONTRIBUTING.md`, `SECURITY.md`                             | Prettier only (excluded from markdownlint)                                  |
 | `.github/workflows/*.yaml`, `test-workflow.yaml`                                   | `npm run lint:yaml`, `npm run lint:workflows`                               |
 | `.github/ISSUE_TEMPLATE/**`, `dependabot.yaml`, `.yamllint`, `.markdownlint*.yaml` | `npm run lint:yaml`                                                         |
-| `.github/scripts/*.sh`, `scripts/*.sh`                                             | `shellcheck <files>`                                                        |
+| `.github/scripts/*.sh`, `scripts/*.sh`                                             | `npm run lint:shell`, `shellcheck <files>`                                  |
 | `*.html`                                                                           | `./scripts/lint-changed.sh` (axe if CLI installed) or rely on CI Suite 2    |
 | `package.json`, `package-lock.json`                                                | `npm run lint`                                                              |
 | Workflow inputs / README tables                                                    | Keep **README.md** and workflow `inputs` in sync; run `npm run lint`        |
@@ -91,6 +91,7 @@ npm run lint
 | ------------------------------- | ----------------------------------------------------------------------------------------------------------- |
 | **actionlint**                  | `brew install actionlint`                                                                                   |
 | **yamllint**                    | `pip install yamllint`                                                                                      |
+| **shfmt**                       | `brew install shfmt`                                                                                          |
 | **shellcheck**                  | `brew install shellcheck`                                                                                   |
 | **typos**                       | `brew install typos-cli`                                                                                    |
 | **editorconfig-checker** (`ec`) | [releases](https://github.com/editorconfig-checker/editorconfig-checker/releases) (`ec-linux-amd64` binary) |
