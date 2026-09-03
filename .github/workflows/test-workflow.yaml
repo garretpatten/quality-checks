@@ -12,7 +12,6 @@ jobs:
     uses: ./.github/workflows/quality-checks.yaml
     with:
       diff_base: ${{ github.event.pull_request.base.sha || '' }}
-      actionlint_run: true
       editorconfig_run: true
       eslint_run: true
       golangci_lint_run: false

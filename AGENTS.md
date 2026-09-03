@@ -91,7 +91,7 @@ LINT_BASE=origin/main ./scripts/lint-changed.sh
 
 | Paths you changed                                                                  | Additional checks                                                       |
 | ---------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| `.github/workflows/*.yaml`, `test-workflow.yaml`                                   | `npm run lint:yaml`, `npm run lint:workflows`                           |
+| `.github/workflows/*.yaml`, `test-workflow.yaml`                                   | `npm run lint:yaml`                                                     |
 | `.github/ISSUE_TEMPLATE/**`, `dependabot.yaml`, `.yamllint`, `.markdownlint*.yaml` | `npm run lint:yaml`                                                     |
 | `.github/scripts/*.sh`, `scripts/*.sh`                                             | `npm run lint:shell` (`shfmt` + `shellcheck -x` on all scripts)         |
 | `*.html`                                                                           | axe via `lint-changed.sh` (optional locally) or CI Accessibility Audits |
@@ -108,7 +108,6 @@ LINT_BASE=origin/main ./scripts/lint-changed.sh
 
 | Tool                            | Install                                                                                                     |
 | ------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| **actionlint**                  | `brew install actionlint` (CI uses `.github/scripts/qc-actionlint-setup.sh`, pinned `1.7.12`)               |
 | **yamllint**                    | `pip install yamllint`                                                                                      |
 | **shfmt**                       | `brew install shfmt`                                                                                        |
 | **shellcheck**                  | `brew install shellcheck`                                                                                   |

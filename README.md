@@ -91,7 +91,6 @@ jobs:
     uses: garretpatten/quality-checks/.github/workflows/quality-checks.yaml@master
     with:
       diff_base: ${{ github.event.pull_request.base.sha }}
-      actionlint_run: true
       editorconfig_run: true
       eslint_run: true
       hadolint_run: true
@@ -154,7 +153,6 @@ with:
 | `go_version`        | string  | `stable`    | Go toolchain for golangci-lint                |
 | `stylua_args`       | string  | `--check .` | Arguments for StyLua                          |
 | `stylua_version`    | string  | `v2.4.1`    | StyLua release tag                            |
-| `actionlint_run`    | boolean | `false`     | GitHub Actions workflow linter                |
 | `editorconfig_run`  | boolean | `false`     | EditorConfig consistency                      |
 | `eslint_run`        | boolean | `false`     | ESLint (JS/TS)                                |
 | `golangci_lint_run` | boolean | `false`     | golangci-lint (`--new-from-rev`)              |
@@ -189,23 +187,22 @@ config is used instead of the generated accessibility-only defaults.
 
 ## Supported linters
 
-| Tool              | Files                                  | Notes                                             |
-| ----------------- | -------------------------------------- | ------------------------------------------------- |
-| **Actionlint**    | `.github/workflows`, `.github/actions` | GitHub Actions-specific rules                     |
-| **EditorConfig**  | Changed text files                     | Uses `ec`; respects `.editorconfig`               |
-| **ESLint**        | `.js`, `.jsx`, `.ts`, `.tsx`           | Installs `npm ci` when `package.json` exists      |
-| **golangci-lint** | Go packages                            | `--new-from-rev` on PR diff                       |
-| **Hadolint**      | `Dockerfile`, `*.dockerfile`           | Dockerfile best practices                         |
-| **jq**            | `.json`                                | Syntax validation (`jq -e`)                       |
-| **Markdownlint**  | `.md`, `.markdown`                     | markdownlint-cli2                                 |
-| **Prettier**      | JS/TS, JSON, CSS, MD                   | Format check; honors `.prettierignore` (not YAML) |
-| **Ruff**          | `.py`, `.pyw`                          | Python lint                                       |
-| **ShellCheck**    | `.sh`, `.bash`, `.zsh`                 | Shell analysis (runner image binary)              |
-| **shfmt**         | `.sh`, `.bash`, `.zsh`                 | Shell formatting (`-d`)                           |
-| **StyLua**        | Lua (via `stylua_args`)                | Whole-tree or path-scoped                         |
-| **Taplo**         | `.toml`                                | TOML lint                                         |
-| **typos**         | `.md`, `.txt`, `.rst`, `.html`, …      | Prose spell check; uses your repo’s `typos.toml`  |
-| **Yamllint**      | `.yml`, `.yaml`                        | General YAML lint                                 |
+| Tool              | Files                             | Notes                                             |
+| ----------------- | --------------------------------- | ------------------------------------------------- |
+| **EditorConfig**  | Changed text files                | Uses `ec`; respects `.editorconfig`               |
+| **ESLint**        | `.js`, `.jsx`, `.ts`, `.tsx`      | Installs `npm ci` when `package.json` exists      |
+| **golangci-lint** | Go packages                       | `--new-from-rev` on PR diff                       |
+| **Hadolint**      | `Dockerfile`, `*.dockerfile`      | Dockerfile best practices                         |
+| **jq**            | `.json`                           | Syntax validation (`jq -e`)                       |
+| **Markdownlint**  | `.md`, `.markdown`                | markdownlint-cli2                                 |
+| **Prettier**      | JS/TS, JSON, CSS, MD              | Format check; honors `.prettierignore` (not YAML) |
+| **Ruff**          | `.py`, `.pyw`                     | Python lint                                       |
+| **ShellCheck**    | `.sh`, `.bash`, `.zsh`            | Shell analysis (runner image binary)              |
+| **shfmt**         | `.sh`, `.bash`, `.zsh`            | Shell formatting (`-d`)                           |
+| **StyLua**        | Lua (via `stylua_args`)           | Whole-tree or path-scoped                         |
+| **Taplo**         | `.toml`                           | TOML lint                                         |
+| **typos**         | `.md`, `.txt`, `.rst`, `.html`, … | Prose spell check; uses your repo’s `typos.toml`  |
+| **Yamllint**      | `.yml`, `.yaml`                   | General YAML lint                                 |
 
 ### typos.toml in consumer repositories
 
@@ -229,7 +226,6 @@ config file outside the root, pass `typos_config: path/to/typos.toml` in the wor
 - **Markdownlint** enforces Markdown style; **Prettier** formats Markdown — complementary.
 - **Yamllint** owns YAML formatting and lint; **Prettier** does not format `.yml`/`.yaml`
   in this workflow (they conflict on quote style and wrapping).
-- **Actionlint** targets GitHub Actions semantics; **Yamllint** covers all YAML — use both for workflows.
 - **ShellCheck** finds shell bugs; **shfmt** enforces layout — complementary.
 
 ### What we deliberately omit

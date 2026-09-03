@@ -68,12 +68,6 @@ run_yamllint() {
 	npm run lint:yaml
 }
 
-run_actionlint() {
-	has_pattern '^\.github/workflows/.*\.ya?ml$' || return 0
-	echo '→ actionlint'
-	npm run lint:workflows
-}
-
 run_shfmt() {
 	local -a files=()
 	local file
@@ -194,7 +188,6 @@ main() {
 
 	run_prettier_other
 	run_yamllint
-	run_actionlint
 	run_shfmt
 	run_shellcheck
 	run_typos

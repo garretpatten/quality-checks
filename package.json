@@ -6,11 +6,10 @@
     "format:md": "prettier --write \"**/*.md\"",
     "lint:docs": "npm run format:check && npm run lint:md",
     "fix:docs": "npm run format:md && npm run lint:md",
-    "lint": "npm run lint:docs && npm run lint:yaml && npm run lint:workflows",
+    "lint": "npm run lint:docs && npm run lint:yaml",
     "lint:changed": "./scripts/lint-changed.sh",
     "lint:md": "markdownlint-cli2",
     "lint:yaml": "yamllint .github .yamllint .markdownlint.yaml",
-    "lint:workflows": "actionlint",
     "lint:shell": "shfmt -d .github/scripts/*.sh scripts/*.sh && shellcheck -x .github/scripts/*.sh scripts/*.sh"
   },
   "devDependencies": {

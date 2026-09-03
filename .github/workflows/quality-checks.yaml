@@ -43,13 +43,6 @@ on:
         required: false
         default: 'v2.4.1'
         type: string
-      actionlint_run:
-        description: >
-          Boolean flag indicating whether the actionlint linter should be
-          executed.
-        required: false
-        default: false
-        type: boolean
       eslint_run:
         description: >
           Boolean flag indicating whether the eslint linter should be
@@ -157,83 +150,6 @@ env:
   QC_DIFF_BASE: ${{ inputs.diff_base }}
 
 jobs:
-  actionlint:
-    if: ${{ inputs.actionlint_run == true }}
-    name: 'Actionlint - GitHub Actions Linter'
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: 'Checkout Code'
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
-        with:
-          fetch-depth: 0
-
-      - name: 'Install actionlint'
-        id: actionlint-install
-        env:
-          # Pin release; bump intentionally when upgrading.
-          ACTIONLINT_VERSION: '1.7.12'
-        run: |
-          set -euo pipefail
-          # shellcheck source=.github/scripts/qc-actionlint-setup.sh
-          source .github/scripts/qc-actionlint-setup.sh
-
-      - name: 'Get changed GitHub Actions files'
-        id: changed-files
-        run: |
-          set -euo pipefail
-          cd "$GITHUB_WORKSPACE"
-          git fetch origin main master 2>/dev/null || true
-          if [[ -n "${QC_DIFF_BASE}" ]]; then
-            BASE_REF="${QC_DIFF_BASE}"
-          elif git show-ref --verify --quiet refs/remotes/origin/main; then
-            BASE_REF="origin/main"
-          elif git show-ref --verify --quiet refs/remotes/origin/master; then
-            BASE_REF="origin/master"
-          else
-            BASE_REF="HEAD~1"
-          fi
-          mapfile -t CHANGED_FILES < <(
-            git diff --name-only --diff-filter=ACMR "${BASE_REF}"...HEAD |
-              grep -E '\.(yml|yaml)$' |
-              grep -E '\.github/(workflows|actions)/' || true
-          )
-          if [[ ${#CHANGED_FILES[@]} -gt 0 ]] && \
-            [[ -n "${CHANGED_FILES[0]}" ]]; then
-            {
-              printf 'files<<EOF\n'
-              printf '%s\n' "${CHANGED_FILES[@]}"
-              printf 'EOF\n'
-              echo 'any_changed=true'
-            } >> "$GITHUB_OUTPUT"
-          else
-            echo 'any_changed=false' >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: 'Run actionlint'
-        run: |
-          set -euo pipefail
-          cd "$GITHUB_WORKSPACE"
-          if [[ "${{ steps.changed-files.outputs.any_changed }}" != \
-            "true" ]]; then
-            echo 'No GitHub Actions files to check'
-            exit 0
-          fi
-          readarray -t raw < <(
-            printf '%s\n' "${{ steps.changed-files.outputs.files }}"
-          )
-          paths=()
-          for file in "${raw[@]}"; do
-            [[ -z "${file}" ]] && continue
-            [[ -f "${file}" ]] || continue
-            paths+=( "${file}" )
-          done
-          if [[ ${#paths[@]} -eq 0 ]]; then
-            echo 'No existing paths to lint'
-            exit 0
-          fi
-          "${ACTIONLINT_BIN:-actionlint}" "${paths[@]}"
-
   eslint:
     if: ${{ inputs.eslint_run == true }}
     name: 'ESLint - JavaScript/TypeScript Linter'
