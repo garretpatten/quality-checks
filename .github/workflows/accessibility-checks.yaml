@@ -77,12 +77,14 @@ jobs:
 
     steps:
       - name: 'Checkout Code'
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
+        # actions/checkout v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
 
       - name: 'Setup Node.js'
-        uses: actions/setup-node@v4
+        # actions/setup-node v7.1.0
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
           node-version: ${{ inputs.node_version }}
 
@@ -192,7 +194,8 @@ jobs:
 
     steps:
       - name: 'Checkout Code'
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
+        # actions/checkout v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
       - name: 'Validate URLs'
         id: urls
@@ -236,8 +239,10 @@ jobs:
             }' > lighthouserc.json
 
       - name: 'Run Lighthouse CI'
-        # yamllint disable-line rule:line-length
-        uses: treosh/lighthouse-ci-action@0b7bcdffda3ec1e1c81a3019ef427c4bac475e3f
+        # yamllint disable rule:line-length
+        # treosh/lighthouse-ci-action 12.6.2
+        uses: treosh/lighthouse-ci-action@3e7e23fb74242897f95c0ba9cabad3d0227b9b18
+        # yamllint enable rule:line-length
         with:
           urls: |
             ${{ steps.urls.outputs.list }}

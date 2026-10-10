@@ -157,12 +157,14 @@ jobs:
 
     steps:
       - name: 'Checkout Code'
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
+        # actions/checkout v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
 
       - name: 'Setup Node.js'
-        uses: actions/setup-node@v4
+        # actions/setup-node v7.1.0
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
           node-version: ${{ inputs.node_version }}
 
@@ -242,7 +244,8 @@ jobs:
 
     steps:
       - name: 'Checkout Code'
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
+        # actions/checkout v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
 
@@ -316,7 +319,8 @@ jobs:
 
     steps:
       - name: 'Checkout Code'
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
+        # actions/checkout v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
 
@@ -376,12 +380,14 @@ jobs:
 
     steps:
       - name: 'Checkout Code'
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
+        # actions/checkout v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
 
       - name: 'Setup Node.js'
-        uses: actions/setup-node@v4
+        # actions/setup-node v7.1.0
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
           node-version: ${{ inputs.node_version }}
 
@@ -453,12 +459,14 @@ jobs:
 
     steps:
       - name: 'Checkout Code'
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
+        # actions/checkout v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
 
       - name: 'Setup Node.js'
-        uses: actions/setup-node@v4
+        # actions/setup-node v7.1.0
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
           node-version: ${{ inputs.node_version }}
 
@@ -534,7 +542,8 @@ jobs:
 
     steps:
       - name: 'Checkout Code'
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
+        # actions/checkout v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
 
@@ -605,7 +614,8 @@ jobs:
 
     steps:
       - name: 'Checkout Code'
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
+        # actions/checkout v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
 
@@ -671,10 +681,14 @@ jobs:
 
     steps:
       - name: 'Checkout Code'
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
+        # actions/checkout v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
       - name: 'Run StyLua'
-        uses: JohnnyMorganz/stylua-action@v4
+        # yamllint disable rule:line-length
+        # JohnnyMorganz/stylua-action v5.0.0
+        uses: JohnnyMorganz/stylua-action@76fd70c03e6340ceaf673366712db9b20560b402
+        # yamllint enable rule:line-length
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           version: ${{ inputs.stylua_version }}
@@ -687,7 +701,8 @@ jobs:
 
     steps:
       - name: 'Checkout Code'
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
+        # actions/checkout v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
 
@@ -762,7 +777,8 @@ jobs:
 
     steps:
       - name: 'Checkout Code'
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
+        # actions/checkout v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
 
@@ -835,7 +851,8 @@ jobs:
 
     steps:
       - name: 'Checkout Code'
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
+        # actions/checkout v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
 
@@ -915,7 +932,8 @@ jobs:
 
     steps:
       - name: 'Checkout Code'
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
+        # actions/checkout v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
 
@@ -981,7 +999,8 @@ jobs:
 
     steps:
       - name: 'Checkout Code'
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
+        # actions/checkout v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
 
@@ -1047,12 +1066,14 @@ jobs:
 
     steps:
       - name: 'Checkout Code'
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
+        # actions/checkout v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
 
       - name: 'Setup Go'
-        uses: actions/setup-go@v5
+        # actions/setup-go v7.0.0
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
         with:
           go-version: ${{ inputs.go_version }}
 
