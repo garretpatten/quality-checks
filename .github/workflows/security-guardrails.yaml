@@ -9,8 +9,9 @@ permissions:
 jobs:
   scans:
     name: 'Scans'
+    # garretpatten/security-guardrails reusable workflow (master HEAD)
     # yamllint disable-line rule:line-length
-    uses: garretpatten/security-guardrails/.github/workflows/security-guardrails.yaml@master
+    uses: garretpatten/security-guardrails/.github/workflows/security-guardrails.yaml@04aa1648e6e4d6eb34bb146f3b872f68c06527d1
     with:
       opengrep_run: true
       supply_chain_run: true
