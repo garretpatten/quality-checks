@@ -17,6 +17,7 @@
     "prettier": "^3.6.2"
   },
   "overrides": {
-    "smol-toml": "^1.7.1"
+    "katex": "^0.18.2",
+    "smol-toml": "^1.9.0"
   }
 }
