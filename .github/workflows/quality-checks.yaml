@@ -146,10 +146,11 @@ on:
         default: false
         type: boolean
     secrets:
-      GITHUB_TOKEN:
+      github_token:
         description: >
           GitHub token for API access (e.g. StyLua version lookup).
-          Optional: falls back to the run's automatically generated token.
+          Pass `${{ secrets.GITHUB_TOKEN }}`. Optional: falls back to the
+          run's automatically generated token.
         required: false
 
 env:
@@ -696,7 +697,7 @@ jobs:
         uses: JohnnyMorganz/stylua-action@76fd70c03e6340ceaf673366712db9b20560b402
         # yamllint enable rule:line-length
         with:
-          token: ${{ secrets.GITHUB_TOKEN || github.token }}
+          token: ${{ secrets.github_token || github.token }}
           version: ${{ inputs.stylua_version }}
           args: ${{ inputs.stylua_args }}
 
