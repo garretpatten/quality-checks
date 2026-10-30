@@ -149,8 +149,8 @@ on:
       token:
         description: >
           GitHub token for API access (e.g. StyLua version lookup). Callers
-          should pass `${{ secrets.GITHUB_TOKEN }}`. Optional: falls back to
-          the run's automatically generated token.
+          should pass their secrets.GITHUB_TOKEN value here. Optional: falls
+          back to the run's automatically generated token.
         required: false
 
 env:
