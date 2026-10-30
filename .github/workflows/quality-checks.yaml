@@ -145,6 +145,12 @@ on:
         required: false
         default: false
         type: boolean
+    secrets:
+      GITHUB_TOKEN:
+        description: >
+          GitHub token for API access (e.g. StyLua version lookup).
+          Optional: falls back to the run's automatically generated token.
+        required: false
 
 env:
   QC_DIFF_BASE: ${{ inputs.diff_base }}
@@ -690,7 +696,7 @@ jobs:
         uses: JohnnyMorganz/stylua-action@76fd70c03e6340ceaf673366712db9b20560b402
         # yamllint enable rule:line-length
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN || github.token }}
           version: ${{ inputs.stylua_version }}
           args: ${{ inputs.stylua_args }}
 
@@ -1079,13 +1085,29 @@ jobs:
 
       - name: 'Install golangci-lint'
         env:
-          GOLANGCI_LINT_VERSION: v2.1.6
+          GOLANGCI_LINT_VERSION: 2.1.6
         run: |
           set -euo pipefail
-          install_url="https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh"
-          curl -fsSL "${install_url}" | \
-            sh -s -- -b "$(go env GOPATH)/bin" "${GOLANGCI_LINT_VERSION}"
-          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+          base_url="https://github.com/golangci/golangci-lint/releases/download"
+          tag="v${GOLANGCI_LINT_VERSION}"
+          archive="golangci-lint-${GOLANGCI_LINT_VERSION}-linux-amd64.tar.gz"
+          checksums="golangci-lint-${GOLANGCI_LINT_VERSION}-checksums.txt"
+          tmpdir="$(mktemp -d)"
+          curl -fsSL -o "${tmpdir}/${archive}" \
+            "${base_url}/${tag}/${archive}"
+          curl -fsSL -o "${tmpdir}/${checksums}" \
+            "${base_url}/${tag}/${checksums}"
+          expected="$(
+            grep " ${archive}\$" "${tmpdir}/${checksums}" | awk '{print $1}'
+          )"
+          echo "${expected}  ${tmpdir}/${archive}" | \
+            sha256sum --check --strict -
+          tar -xzf "${tmpdir}/${archive}" -C "${tmpdir}"
+          extract_dir="golangci-lint-${GOLANGCI_LINT_VERSION}-linux-amd64"
+          sudo install -m 0755 \
+            "${tmpdir}/${extract_dir}/golangci-lint" \
+            /usr/local/bin/golangci-lint
+          rm -rf "${tmpdir}"
 
       - name: 'Get changed Go files'
         id: changed-files
