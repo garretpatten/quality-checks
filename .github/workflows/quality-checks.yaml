@@ -145,6 +145,12 @@ on:
         required: false
         default: false
         type: boolean
+    secrets:
+      GITHUB_TOKEN:
+        description: >
+          GitHub token for API access (e.g. StyLua version lookup).
+          Optional: falls back to the run's automatically generated token.
+        required: false
 
 env:
   QC_DIFF_BASE: ${{ inputs.diff_base }}
@@ -690,7 +696,7 @@ jobs:
         uses: JohnnyMorganz/stylua-action@76fd70c03e6340ceaf673366712db9b20560b402
         # yamllint enable rule:line-length
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN || github.token }}
           version: ${{ inputs.stylua_version }}
           args: ${{ inputs.stylua_args }}
 

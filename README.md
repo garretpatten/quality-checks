@@ -103,7 +103,8 @@ jobs:
       taplo_run: true
       typos_run: true
       yamllint_run: true
-    secrets: inherit
+    secrets:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
 ### Accessibility Audits
@@ -125,7 +126,6 @@ jobs:
       local_html_paths: |
         docs/index.html
       lighthouse_min_accessibility: '0.9'
-    secrets: inherit
 ```
 
 **Pin a commit SHA** instead of `@master` for supply-chain control:
@@ -168,6 +168,17 @@ with:
 | `typos_run`         | boolean | `false`     | typos spell checker                           |
 | `typos_config`      | string  | _(empty)_   | Path to `typos.toml` (auto-detected if empty) |
 | `yamllint_run`      | boolean | `false`     | Yamllint                                      |
+
+## Linter secrets
+
+| Parameter      | Type   | Default   | Description                                         |
+| -------------- | ------ | --------- | --------------------------------------------------- |
+| `GITHUB_TOKEN` | string | _(empty)_ | GitHub token for API access (StyLua version lookup) |
+
+The token is optional; when not passed, the workflow falls back to the run's
+automatically generated `github.token`. Prefer passing `GITHUB_TOKEN`
+explicitly over `secrets: inherit` to follow the principle of least privilege.
+`secrets: inherit` remains supported for backward compatibility.
 
 ## Accessibility inputs
 
