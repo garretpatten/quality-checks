@@ -104,7 +104,7 @@ jobs:
       typos_run: true
       yamllint_run: true
     secrets:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      github_token: ${{ secrets.GITHUB_TOKEN }}
 ```
 
 ### Accessibility Audits
@@ -173,12 +173,15 @@ with:
 
 | Parameter      | Type   | Default   | Description                                         |
 | -------------- | ------ | --------- | --------------------------------------------------- |
-| `GITHUB_TOKEN` | string | _(empty)_ | GitHub token for API access (StyLua version lookup) |
+| `github_token` | string | _(empty)_ | GitHub token for API access (StyLua version lookup) |
 
 The token is optional; when not passed, the workflow falls back to the run's
-automatically generated `github.token`. Prefer passing `GITHUB_TOKEN`
-explicitly over `secrets: inherit` to follow the principle of least privilege.
-`secrets: inherit` remains supported for backward compatibility.
+automatically generated `github.token`. Pass it as
+`github_token: ${{ secrets.GITHUB_TOKEN }}`. Explicit passing is preferred
+over `secrets: inherit` to follow the principle of least privilege.
+`secrets: inherit` remains supported for backward compatibility. Note: a
+secret id cannot be named `GITHUB_TOKEN` in `workflow_call.secrets` because
+that collides with the system-reserved name, hence the `github_token` alias.
 
 ## Accessibility inputs
 
