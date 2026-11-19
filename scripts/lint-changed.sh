@@ -2,9 +2,6 @@
 # Run linters that match files changed in the working tree or vs the default branch.
 set -euo pipefail
 
-repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-cd "${repo_root}"
-
 resolve_base() {
 	if [[ -n "${LINT_BASE:-}" ]]; then
 		echo "${LINT_BASE}"
@@ -20,24 +17,6 @@ resolve_base() {
 	fi
 }
 
-BASE_REF="$(resolve_base)"
-
-mapfile -t changed < <(
-	{
-		git diff --name-only --diff-filter=ACMR "${BASE_REF}"...HEAD 2>/dev/null || true
-		git diff --name-only
-		git diff --cached --name-only
-	} | sed '/^$/d' | sort -u | .github/scripts/qc-filter-changed-paths.sh
-)
-
-if [[ ${#changed[@]} -eq 0 ]]; then
-	echo "No changed files detected (base: ${BASE_REF})."
-	exit 0
-fi
-
-echo "Changed files (base: ${BASE_REF}):"
-printf '  %s\n' "${changed[@]}"
-
 has_pattern() {
 	local pattern="$1"
 	local file
@@ -50,7 +29,9 @@ has_pattern() {
 filter_existing() {
 	local file
 	for file in "$@"; do
-		[[ -f "${file}" ]] && printf '%s\n' "${file}"
+		if [[ -f "${file}" ]]; then
+			printf '%s\n' "${file}"
+		fi
 	done
 }
 
@@ -114,7 +95,7 @@ run_typos() {
 		return 0
 	fi
 	echo '→ typos'
-	# shellcheck source=.github/scripts/qc-typos-args.sh
+	# shellcheck source=../.github/scripts/qc-typos-args.sh
 	source .github/scripts/qc-typos-args.sh
 	if [[ ${#TYPOS_CLI_ARGS[@]} -gt 0 ]]; then
 		echo "  config: ${TYPOS_CLI_ARGS[1]}"
@@ -147,7 +128,7 @@ run_axe_fixture() {
 	fi
 	if [[ -z "${CHROMEDRIVER_PATH:-}" ]]; then
 		if [[ -f .github/scripts/qc-axe-setup.sh ]]; then
-			# shellcheck source=.github/scripts/qc-axe-setup.sh
+			# shellcheck source=../.github/scripts/qc-axe-setup.sh
 			source .github/scripts/qc-axe-setup.sh
 		else
 			echo '→ axe-core (skipped — run: npx browser-driver-manager install chrome)'
@@ -180,7 +161,32 @@ run_prettier_other() {
 	npx prettier --check "${files[@]}"
 }
 
+collect_changed_files() {
+	BASE_REF="$(resolve_base)"
+	mapfile -t changed < <(
+		{
+			git diff --name-only --diff-filter=ACMR "${BASE_REF}"...HEAD 2>/dev/null || true
+			git diff --name-only
+			git diff --cached --name-only
+		} | sed '/^$/d' | sort -u | .github/scripts/qc-filter-changed-paths.sh
+	)
+}
+
 main() {
+	local repo_root
+	repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+	cd "${repo_root}"
+
+	collect_changed_files
+
+	if [[ ${#changed[@]} -eq 0 ]]; then
+		echo "No changed files detected (base: ${BASE_REF})."
+		exit 0
+	fi
+
+	echo "Changed files (base: ${BASE_REF}):"
+	printf '  %s\n' "${changed[@]}"
+
 	if [[ ! -d node_modules ]]; then
 		echo '→ npm install'
 		npm install
@@ -198,4 +204,6 @@ main() {
 	echo 'All applicable linters passed.'
 }
 
-main "$@"
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+	main "$@"
+fi

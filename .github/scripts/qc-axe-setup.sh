@@ -3,11 +3,6 @@
 # Sets CHROMEDRIVER_PATH (and appends to GITHUB_ENV when set).
 set -euo pipefail
 
-npm install -g @axe-core/cli
-
-echo 'Syncing ChromeDriver with installed Chrome (browser-driver-manager)…'
-npx --yes browser-driver-manager@2.0.1 install chrome
-
 resolve_chromedriver() {
 	local path=""
 	path="$(command -v chromedriver 2>/dev/null || true)"
@@ -26,17 +21,33 @@ resolve_chromedriver() {
 	return 1
 }
 
-CHROMEDRIVER_PATH="$(resolve_chromedriver)" || {
-	echo 'chromedriver not found after browser-driver-manager install' >&2
-	exit 1
+qc_axe_setup() {
+	npm install -g @axe-core/cli
+
+	echo 'Syncing ChromeDriver with installed Chrome (browser-driver-manager)…'
+	npx --yes browser-driver-manager@2.0.1 install chrome
+
+	CHROMEDRIVER_PATH="$(resolve_chromedriver)" || {
+		echo 'chromedriver not found after browser-driver-manager install' >&2
+		exit 1
+	}
+
+	echo "Chrome: $(google-chrome --version 2>/dev/null || true)"
+	echo "ChromeDriver: $("${CHROMEDRIVER_PATH}" --version 2>/dev/null || true)"
+	echo "CHROMEDRIVER_PATH=${CHROMEDRIVER_PATH}"
+
+	if [[ -n "${GITHUB_ENV:-}" ]]; then
+		echo "CHROMEDRIVER_PATH=${CHROMEDRIVER_PATH}" >>"${GITHUB_ENV}"
+	fi
+
+	export CHROMEDRIVER_PATH
 }
 
-echo "Chrome: $(google-chrome --version 2>/dev/null || true)"
-echo "ChromeDriver: $("${CHROMEDRIVER_PATH}" --version 2>/dev/null || true)"
-echo "CHROMEDRIVER_PATH=${CHROMEDRIVER_PATH}"
-
-if [[ -n "${GITHUB_ENV:-}" ]]; then
-	echo "CHROMEDRIVER_PATH=${CHROMEDRIVER_PATH}" >>"${GITHUB_ENV}"
+# Workflows and lint-changed.sh source this file and expect the install to
+# run immediately. bats tests source it to call resolve_chromedriver (and
+# qc_axe_setup with stubs), so skip the automatic run under bats.
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+	qc_axe_setup
+elif [[ -z "${BATS_VERSION:-}" ]]; then
+	qc_axe_setup
 fi
-
-export CHROMEDRIVER_PATH

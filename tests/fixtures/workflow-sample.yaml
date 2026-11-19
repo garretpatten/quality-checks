@@ -1,0 +1,12 @@
+# Fixture workflow used in path-filter and docs tests.
+name: 'Sample consumer'
+
+on: pull_request
+
+jobs:
+  linters:
+    name: 'Linters'
+    uses: ./.github/workflows/quality-checks.yaml
+    with:
+      diff_base: ${{ github.event.pull_request.base.sha }}
+      markdownlint_run: true

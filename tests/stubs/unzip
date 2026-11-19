@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# shellcheck source=_record
+source "$(dirname "$0")/_record"
+if [[ -n "${STUB_FAIL:-}" && "${STUB_FAIL}" == "$(basename "$0")" ]]; then
+	exit "${STUB_FAIL_CODE:-1}"
+fi

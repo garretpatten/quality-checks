@@ -10,7 +10,8 @@
     "lint:changed": "./scripts/lint-changed.sh",
     "lint:md": "markdownlint-cli2",
     "lint:yaml": "yamllint .github .yamllint .markdownlint.yaml",
-    "lint:shell": "shfmt -d .github/scripts/*.sh scripts/*.sh && shellcheck -x .github/scripts/*.sh scripts/*.sh"
+    "lint:shell": "./scripts/lint-shell.sh",
+    "test:shell": "PATH=\"$PWD/.tools/bats/bin:$PATH\" BATS_LIB_PATH=\"$PWD/.tools${BATS_LIB_PATH:+:$BATS_LIB_PATH}\" bats --recursive tests"
   },
   "devDependencies": {
     "markdownlint-cli2": "^0.23.3",
