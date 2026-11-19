@@ -40,5 +40,17 @@ Shell script changes require **shfmt** and **shellcheck** (`brew install shfmt s
 or `npm run lint:shell` after installing both). Use **`shellcheck -x`** so sourced files under
 `.github/scripts/` are checked.
 
+Shell unit tests use [bats-core](https://github.com/bats-core/bats-core).
+Install the runner and helper libraries from release tarballs, then run the
+suite:
+
+```bash
+./scripts/install-bats.sh
+npm run test:shell
+```
+
+`test:shell` runs `bats --recursive tests`. See **[README.md](./README.md)**
+(Testing) and **[AGENTS.md](./AGENTS.md)** for the layout and CI job.
+
 Documentation-only changes still need **Prettier** and **Markdownlint** on touched
 Markdown files.

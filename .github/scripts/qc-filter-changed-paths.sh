@@ -15,8 +15,14 @@ qc_should_skip_changed_path() {
 	return 1
 }
 
-while IFS= read -r path || [[ -n "${path}" ]]; do
-	[[ -z "${path}" ]] && continue
-	qc_should_skip_changed_path "${path}" && continue
-	printf '%s\n' "${path}"
-done
+qc_filter_changed_paths() {
+	while IFS= read -r path || [[ -n "${path}" ]]; do
+		[[ -z "${path}" ]] && continue
+		qc_should_skip_changed_path "${path}" && continue
+		printf '%s\n' "${path}"
+	done
+}
+
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+	qc_filter_changed_paths
+fi
