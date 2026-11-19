@@ -77,18 +77,12 @@ refute_stub_call() {
 	fi
 }
 
-# Return PATH with directories that contain an executable named $1 removed.
-path_without_command() {
-	local cmd="$1"
-	local dir
-	local -a parts new_path=()
-	local IFS=':'
-	read -ra parts <<<"${PATH}"
-	for dir in "${parts[@]}"; do
-		[[ -x "${dir}/${cmd}" ]] && continue
-		new_path+=("${dir}")
-	done
-	printf '%s' "${new_path[*]}"
+# Hide a PATH binary from `command -v` + `[[ -x ]]` by defining a function
+# of the same name. Functions take precedence, and the printed name is not
+# an executable path, so resolve helpers fall through to the next lookup.
+# This avoids dropping /usr/bin from PATH when the host already has the tool.
+hide_path_command() {
+	eval "${1}() { return 127; }"
 }
 
 # Create a git repo at $1 with two commits. Optional $2 is the branch name

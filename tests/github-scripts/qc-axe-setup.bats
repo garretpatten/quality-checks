@@ -25,9 +25,12 @@ teardown() {
 
 host_tmp_has_chromedriver() {
 	# Ignore leftover trees from this suite; they are cleaned in teardown.
-	find /tmp -name chromedriver -type f -perm -111 2>/dev/null |
-		grep -v '/qc-chromedriver\.' |
-		grep -q .
+	# `|| true` is required because find often exits 1 on unreadable
+	# /tmp entries and this file is sourced under `set -o pipefail`.
+	local hits
+	hits="$(find /tmp -name chromedriver -type f -perm -111 2>/dev/null |
+		grep -v '/qc-chromedriver\.' || true)"
+	[[ -n "${hits}" ]]
 }
 
 @test "resolve_chromedriver returns a chromedriver on PATH" {
@@ -44,7 +47,7 @@ host_tmp_has_chromedriver() {
 	mkdir -p "${HOME}/.browser-driver-manager/drivers"
 	cp "${CHROMEDRIVER_STUB}" \
 		"${HOME}/.browser-driver-manager/drivers/chromedriver"
-	PATH="$(path_without_command chromedriver)"
+	hide_path_command chromedriver
 	run resolve_chromedriver
 	assert_success
 	assert_output "${HOME}/.browser-driver-manager/drivers/chromedriver"
@@ -54,7 +57,7 @@ host_tmp_has_chromedriver() {
 	TMP_CHROMEDRIVER_DIR="$(mktemp -d /tmp/qc-chromedriver.XXXXXX)"
 	cp "${CHROMEDRIVER_STUB}" "${TMP_CHROMEDRIVER_DIR}/chromedriver"
 	chmod +x "${TMP_CHROMEDRIVER_DIR}/chromedriver"
-	PATH="$(path_without_command chromedriver)"
+	hide_path_command chromedriver
 	run resolve_chromedriver
 	assert_success
 	assert_file_executable "${output}"
@@ -65,7 +68,7 @@ host_tmp_has_chromedriver() {
 	if host_tmp_has_chromedriver; then
 		skip "host /tmp already has a chromedriver"
 	fi
-	PATH="$(path_without_command chromedriver)"
+	hide_path_command chromedriver
 	run resolve_chromedriver
 	assert_failure
 	assert_output ""
@@ -92,7 +95,7 @@ host_tmp_has_chromedriver() {
 	if host_tmp_has_chromedriver; then
 		skip "host /tmp already has a chromedriver"
 	fi
-	PATH="$(path_without_command chromedriver)"
+	hide_path_command chromedriver
 	run --separate-stderr qc_axe_setup
 	assert_failure 1
 	# shellcheck disable=SC2154 # $stderr is set by run --separate-stderr
