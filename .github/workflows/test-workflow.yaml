@@ -67,7 +67,8 @@ jobs:
       taplo_run: true
       typos_run: true
       yamllint_run: true
-    secrets: inherit
+    secrets:
+      token: ${{ secrets.GITHUB_TOKEN }}
 
   accessibility:
     name: 'Accessibility Audits'
@@ -77,4 +78,3 @@ jobs:
       axe_run: true
       lighthouse_run: false
       local_html_paths: docs/fixtures/a11y-sample.html
-    secrets: inherit

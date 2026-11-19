@@ -44,6 +44,7 @@ host_tmp_has_chromedriver() {
 	mkdir -p "${HOME}/.browser-driver-manager/drivers"
 	cp "${CHROMEDRIVER_STUB}" \
 		"${HOME}/.browser-driver-manager/drivers/chromedriver"
+	PATH="$(path_without_command chromedriver)"
 	run resolve_chromedriver
 	assert_success
 	assert_output "${HOME}/.browser-driver-manager/drivers/chromedriver"
@@ -53,6 +54,7 @@ host_tmp_has_chromedriver() {
 	TMP_CHROMEDRIVER_DIR="$(mktemp -d /tmp/qc-chromedriver.XXXXXX)"
 	cp "${CHROMEDRIVER_STUB}" "${TMP_CHROMEDRIVER_DIR}/chromedriver"
 	chmod +x "${TMP_CHROMEDRIVER_DIR}/chromedriver"
+	PATH="$(path_without_command chromedriver)"
 	run resolve_chromedriver
 	assert_success
 	assert_file_executable "${output}"
@@ -63,6 +65,7 @@ host_tmp_has_chromedriver() {
 	if host_tmp_has_chromedriver; then
 		skip "host /tmp already has a chromedriver"
 	fi
+	PATH="$(path_without_command chromedriver)"
 	run resolve_chromedriver
 	assert_failure
 	assert_output ""
@@ -89,6 +92,7 @@ host_tmp_has_chromedriver() {
 	if host_tmp_has_chromedriver; then
 		skip "host /tmp already has a chromedriver"
 	fi
+	PATH="$(path_without_command chromedriver)"
 	run --separate-stderr qc_axe_setup
 	assert_failure 1
 	# shellcheck disable=SC2154 # $stderr is set by run --separate-stderr

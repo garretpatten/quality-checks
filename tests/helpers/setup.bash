@@ -77,6 +77,20 @@ refute_stub_call() {
 	fi
 }
 
+# Return PATH with directories that contain an executable named $1 removed.
+path_without_command() {
+	local cmd="$1"
+	local dir
+	local -a parts new_path=()
+	local IFS=':'
+	read -ra parts <<<"${PATH}"
+	for dir in "${parts[@]}"; do
+		[[ -x "${dir}/${cmd}" ]] && continue
+		new_path+=("${dir}")
+	done
+	printf '%s' "${new_path[*]}"
+}
+
 # Create a git repo at $1 with two commits. Optional $2 is the branch name
 # (default: main). If $3 is "origin", add a local bare remote and fetch it
 # so refs/remotes/origin/<branch> exists.

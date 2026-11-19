@@ -6,7 +6,7 @@ on: pull_request
 jobs:
   linters:
     name: 'Linters'
-    uses: garretpatten/quality-checks/.github/workflows/quality-checks.yaml@master
+    uses: ./.github/workflows/quality-checks.yaml
     with:
       diff_base: ${{ github.event.pull_request.base.sha }}
       markdownlint_run: true
