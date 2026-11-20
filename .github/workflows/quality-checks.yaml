@@ -221,16 +221,18 @@ jobs:
           fi
 
       - name: 'Run ESLint'
+        env:
+          QC_ANY_CHANGED: ${{ steps.changed-files.outputs.any_changed }}
+          QC_FILES: ${{ steps.changed-files.outputs.files }}
         run: |
           set -euo pipefail
           cd "$GITHUB_WORKSPACE"
-          if [[ "${{ steps.changed-files.outputs.any_changed }}" != \
-            "true" ]]; then
+          if [[ "${QC_ANY_CHANGED}" != "true" ]]; then
             echo 'No JavaScript/TypeScript files to check'
             exit 0
           fi
           readarray -t raw < <(
-            printf '%s\n' "${{ steps.changed-files.outputs.files }}"
+            printf '%s\n' "${QC_FILES}"
           )
           paths=()
           for file in "${raw[@]}"; do
@@ -296,16 +298,18 @@ jobs:
           fi
 
       - name: 'Run Hadolint'
+        env:
+          QC_ANY_CHANGED: ${{ steps.changed-files.outputs.any_changed }}
+          QC_FILES: ${{ steps.changed-files.outputs.files }}
         run: |
           set -euo pipefail
           cd "$GITHUB_WORKSPACE"
-          if [[ "${{ steps.changed-files.outputs.any_changed }}" != \
-            "true" ]]; then
+          if [[ "${QC_ANY_CHANGED}" != "true" ]]; then
             echo 'No Dockerfile files to check'
             exit 0
           fi
           readarray -t raw < <(
-            printf '%s\n' "${{ steps.changed-files.outputs.files }}"
+            printf '%s\n' "${QC_FILES}"
           )
           paths=()
           for file in "${raw[@]}"; do
@@ -363,16 +367,18 @@ jobs:
           fi
 
       - name: 'Run jq'
+        env:
+          QC_ANY_CHANGED: ${{ steps.changed-files.outputs.any_changed }}
+          QC_FILES: ${{ steps.changed-files.outputs.files }}
         run: |
           set -euo pipefail
           cd "$GITHUB_WORKSPACE"
-          if [[ "${{ steps.changed-files.outputs.any_changed }}" != \
-            "true" ]]; then
+          if [[ "${QC_ANY_CHANGED}" != "true" ]]; then
             echo 'No JSON files to check'
             exit 0
           fi
           readarray -t raw < <(
-            printf '%s\n' "${{ steps.changed-files.outputs.files }}"
+            printf '%s\n' "${QC_FILES}"
           )
           for file in "${raw[@]}"; do
             [[ -z "${file}" ]] && continue
@@ -436,16 +442,18 @@ jobs:
           fi
 
       - name: 'Run markdownlint-cli2'
+        env:
+          QC_ANY_CHANGED: ${{ steps.changed-files.outputs.any_changed }}
+          QC_FILES: ${{ steps.changed-files.outputs.files }}
         run: |
           set -euo pipefail
           cd "$GITHUB_WORKSPACE"
-          if [[ "${{ steps.changed-files.outputs.any_changed }}" != \
-            "true" ]]; then
+          if [[ "${QC_ANY_CHANGED}" != "true" ]]; then
             echo 'No Markdown files to check'
             exit 0
           fi
           readarray -t raw < <(
-            printf '%s\n' "${{ steps.changed-files.outputs.files }}"
+            printf '%s\n' "${QC_FILES}"
           )
           paths=()
           for file in "${raw[@]}"; do
@@ -516,16 +524,18 @@ jobs:
           fi
 
       - name: 'Run Prettier'
+        env:
+          QC_ANY_CHANGED: ${{ steps.changed-files.outputs.any_changed }}
+          QC_FILES: ${{ steps.changed-files.outputs.files }}
         run: |
           set -euo pipefail
           cd "$GITHUB_WORKSPACE"
-          if [[ "${{ steps.changed-files.outputs.any_changed }}" != \
-            "true" ]]; then
+          if [[ "${QC_ANY_CHANGED}" != "true" ]]; then
             echo 'No files to check with Prettier'
             exit 0
           fi
           readarray -t raw < <(
-            printf '%s\n' "${{ steps.changed-files.outputs.files }}"
+            printf '%s\n' "${QC_FILES}"
           )
           paths=()
           for file in "${raw[@]}"; do
@@ -591,16 +601,18 @@ jobs:
           fi
 
       - name: 'Run Ruff'
+        env:
+          QC_ANY_CHANGED: ${{ steps.changed-files.outputs.any_changed }}
+          QC_FILES: ${{ steps.changed-files.outputs.files }}
         run: |
           set -euo pipefail
           cd "$GITHUB_WORKSPACE"
-          if [[ "${{ steps.changed-files.outputs.any_changed }}" != \
-            "true" ]]; then
+          if [[ "${QC_ANY_CHANGED}" != "true" ]]; then
             echo 'No Python files to check'
             exit 0
           fi
           readarray -t raw < <(
-            printf '%s\n' "${{ steps.changed-files.outputs.files }}"
+            printf '%s\n' "${QC_FILES}"
           )
           paths=()
           for file in "${raw[@]}"; do
@@ -658,16 +670,18 @@ jobs:
           fi
 
       - name: 'Run ShellCheck'
+        env:
+          QC_ANY_CHANGED: ${{ steps.changed-files.outputs.any_changed }}
+          QC_FILES: ${{ steps.changed-files.outputs.files }}
         run: |
           set -euo pipefail
           cd "$GITHUB_WORKSPACE"
-          if [[ "${{ steps.changed-files.outputs.any_changed }}" != \
-            "true" ]]; then
+          if [[ "${QC_ANY_CHANGED}" != "true" ]]; then
             echo 'No shell files to check'
             exit 0
           fi
           readarray -t raw < <(
-            printf '%s\n' "${{ steps.changed-files.outputs.files }}"
+            printf '%s\n' "${QC_FILES}"
           )
           paths=()
           for file in "${raw[@]}"; do
@@ -754,16 +768,18 @@ jobs:
           fi
 
       - name: 'Run Taplo'
+        env:
+          QC_ANY_CHANGED: ${{ steps.changed-files.outputs.any_changed }}
+          QC_FILES: ${{ steps.changed-files.outputs.files }}
         run: |
           set -euo pipefail
           cd "$GITHUB_WORKSPACE"
-          if [[ "${{ steps.changed-files.outputs.any_changed }}" != \
-            "true" ]]; then
+          if [[ "${QC_ANY_CHANGED}" != "true" ]]; then
             echo 'No TOML files to check'
             exit 0
           fi
           readarray -t raw < <(
-            printf '%s\n' "${{ steps.changed-files.outputs.files }}"
+            printf '%s\n' "${QC_FILES}"
           )
           paths=()
           for file in "${raw[@]}"; do
@@ -826,16 +842,18 @@ jobs:
           fi
 
       - name: 'Run yamllint'
+        env:
+          QC_ANY_CHANGED: ${{ steps.changed-files.outputs.any_changed }}
+          QC_FILES: ${{ steps.changed-files.outputs.files }}
         run: |
           set -euo pipefail
           cd "$GITHUB_WORKSPACE"
-          if [[ "${{ steps.changed-files.outputs.any_changed }}" != \
-            "true" ]]; then
+          if [[ "${QC_ANY_CHANGED}" != "true" ]]; then
             echo 'No YAML files to check'
             exit 0
           fi
           readarray -t raw < <(
-            printf '%s\n' "${{ steps.changed-files.outputs.files }}"
+            printf '%s\n' "${QC_FILES}"
           )
           paths=()
           for file in "${raw[@]}"; do
@@ -902,16 +920,18 @@ jobs:
           fi
 
       - name: 'Run typos'
+        env:
+          QC_ANY_CHANGED: ${{ steps.changed-files.outputs.any_changed }}
+          QC_FILES: ${{ steps.changed-files.outputs.files }}
         run: |
           set -euo pipefail
           cd "$GITHUB_WORKSPACE"
-          if [[ "${{ steps.changed-files.outputs.any_changed }}" != \
-            "true" ]]; then
+          if [[ "${QC_ANY_CHANGED}" != "true" ]]; then
             echo 'No changed files to spell-check'
             exit 0
           fi
           readarray -t raw < <(
-            printf '%s\n' "${{ steps.changed-files.outputs.files }}"
+            printf '%s\n' "${QC_FILES}"
           )
           paths=()
           for file in "${raw[@]}"; do
@@ -976,16 +996,18 @@ jobs:
           fi
 
       - name: 'Run editorconfig-checker'
+        env:
+          QC_ANY_CHANGED: ${{ steps.changed-files.outputs.any_changed }}
+          QC_FILES: ${{ steps.changed-files.outputs.files }}
         run: |
           set -euo pipefail
           cd "$GITHUB_WORKSPACE"
-          if [[ "${{ steps.changed-files.outputs.any_changed }}" != \
-            "true" ]]; then
+          if [[ "${QC_ANY_CHANGED}" != "true" ]]; then
             echo 'No changed files to check'
             exit 0
           fi
           readarray -t raw < <(
-            printf '%s\n' "${{ steps.changed-files.outputs.files }}"
+            printf '%s\n' "${QC_FILES}"
           )
           paths=()
           for file in "${raw[@]}"; do
@@ -1043,16 +1065,18 @@ jobs:
           fi
 
       - name: 'Run shfmt'
+        env:
+          QC_ANY_CHANGED: ${{ steps.changed-files.outputs.any_changed }}
+          QC_FILES: ${{ steps.changed-files.outputs.files }}
         run: |
           set -euo pipefail
           cd "$GITHUB_WORKSPACE"
-          if [[ "${{ steps.changed-files.outputs.any_changed }}" != \
-            "true" ]]; then
+          if [[ "${QC_ANY_CHANGED}" != "true" ]]; then
             echo 'No shell files to check'
             exit 0
           fi
           readarray -t raw < <(
-            printf '%s\n' "${{ steps.changed-files.outputs.files }}"
+            printf '%s\n' "${QC_FILES}"
           )
           paths=()
           for file in "${raw[@]}"; do
@@ -1127,12 +1151,13 @@ jobs:
           fi
 
       - name: 'Run golangci-lint'
+        env:
+          QC_ANY_CHANGED: ${{ steps.changed-files.outputs.any_changed }}
         run: |
           set -euo pipefail
           cd "$GITHUB_WORKSPACE"
           source .github/scripts/qc-resolve-base.sh
-          if [[ "${{ steps.changed-files.outputs.any_changed }}" != \
-            "true" ]]; then
+          if [[ "${QC_ANY_CHANGED}" != "true" ]]; then
             echo 'No Go files to check'
             exit 0
           fi
