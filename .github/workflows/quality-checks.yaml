@@ -210,12 +210,10 @@ jobs:
           )
           if [[ ${#CHANGED_FILES[@]} -gt 0 ]] && \
             [[ -n "${CHANGED_FILES[0]}" ]]; then
-            {
-              printf 'files<<EOF\n'
-              printf '%s\n' "${CHANGED_FILES[@]}"
-              printf 'EOF\n'
-              echo 'any_changed=true'
-            } >> "$GITHUB_OUTPUT"
+            # shellcheck source=.github/scripts/qc-write-multiline-output.sh
+            source .github/scripts/qc-write-multiline-output.sh
+            qc_write_multiline_output files "${CHANGED_FILES[@]}"
+            echo 'any_changed=true' >> "$GITHUB_OUTPUT"
           else
             echo 'any_changed=false' >> "$GITHUB_OUTPUT"
           fi
@@ -287,12 +285,10 @@ jobs:
           )
           if [[ ${#CHANGED_FILES[@]} -gt 0 ]] && \
             [[ -n "${CHANGED_FILES[0]}" ]]; then
-            {
-              printf 'files<<EOF\n'
-              printf '%s\n' "${CHANGED_FILES[@]}"
-              printf 'EOF\n'
-              echo 'any_changed=true'
-            } >> "$GITHUB_OUTPUT"
+            # shellcheck source=.github/scripts/qc-write-multiline-output.sh
+            source .github/scripts/qc-write-multiline-output.sh
+            qc_write_multiline_output files "${CHANGED_FILES[@]}"
+            echo 'any_changed=true' >> "$GITHUB_OUTPUT"
           else
             echo 'any_changed=false' >> "$GITHUB_OUTPUT"
           fi
@@ -356,12 +352,10 @@ jobs:
           )
           if [[ ${#CHANGED_FILES[@]} -gt 0 ]] && \
             [[ -n "${CHANGED_FILES[0]}" ]]; then
-            {
-              printf 'files<<EOF\n'
-              printf '%s\n' "${CHANGED_FILES[@]}"
-              printf 'EOF\n'
-              echo 'any_changed=true'
-            } >> "$GITHUB_OUTPUT"
+            # shellcheck source=.github/scripts/qc-write-multiline-output.sh
+            source .github/scripts/qc-write-multiline-output.sh
+            qc_write_multiline_output files "${CHANGED_FILES[@]}"
+            echo 'any_changed=true' >> "$GITHUB_OUTPUT"
           else
             echo 'any_changed=false' >> "$GITHUB_OUTPUT"
           fi
@@ -383,7 +377,8 @@ jobs:
           for file in "${raw[@]}"; do
             [[ -z "${file}" ]] && continue
             [[ -f "${file}" ]] || continue
-            jq -e . "${file}" >/dev/null
+            # jq empty accepts a root of false or null; jq -e . does not.
+            jq empty "${file}" >/dev/null
           done
 
   markdownlint:
@@ -431,12 +426,10 @@ jobs:
           )
           if [[ ${#CHANGED_FILES[@]} -gt 0 ]] && \
             [[ -n "${CHANGED_FILES[0]}" ]]; then
-            {
-              printf 'files<<EOF\n'
-              printf '%s\n' "${CHANGED_FILES[@]}"
-              printf 'EOF\n'
-              echo 'any_changed=true'
-            } >> "$GITHUB_OUTPUT"
+            # shellcheck source=.github/scripts/qc-write-multiline-output.sh
+            source .github/scripts/qc-write-multiline-output.sh
+            qc_write_multiline_output files "${CHANGED_FILES[@]}"
+            echo 'any_changed=true' >> "$GITHUB_OUTPUT"
           else
             echo 'any_changed=false' >> "$GITHUB_OUTPUT"
           fi
@@ -513,12 +506,10 @@ jobs:
           )
           if [[ ${#CHANGED_FILES[@]} -gt 0 ]] && \
             [[ -n "${CHANGED_FILES[0]}" ]]; then
-            {
-              printf 'files<<EOF\n'
-              printf '%s\n' "${CHANGED_FILES[@]}"
-              printf 'EOF\n'
-              echo 'any_changed=true'
-            } >> "$GITHUB_OUTPUT"
+            # shellcheck source=.github/scripts/qc-write-multiline-output.sh
+            source .github/scripts/qc-write-multiline-output.sh
+            qc_write_multiline_output files "${CHANGED_FILES[@]}"
+            echo 'any_changed=true' >> "$GITHUB_OUTPUT"
           else
             echo 'any_changed=false' >> "$GITHUB_OUTPUT"
           fi
@@ -590,12 +581,10 @@ jobs:
           )
           if [[ ${#CHANGED_FILES[@]} -gt 0 ]] && \
             [[ -n "${CHANGED_FILES[0]}" ]]; then
-            {
-              printf 'files<<EOF\n'
-              printf '%s\n' "${CHANGED_FILES[@]}"
-              printf 'EOF\n'
-              echo 'any_changed=true'
-            } >> "$GITHUB_OUTPUT"
+            # shellcheck source=.github/scripts/qc-write-multiline-output.sh
+            source .github/scripts/qc-write-multiline-output.sh
+            qc_write_multiline_output files "${CHANGED_FILES[@]}"
+            echo 'any_changed=true' >> "$GITHUB_OUTPUT"
           else
             echo 'any_changed=false' >> "$GITHUB_OUTPUT"
           fi
@@ -659,12 +648,10 @@ jobs:
           )
           if [[ ${#CHANGED_FILES[@]} -gt 0 ]] && \
             [[ -n "${CHANGED_FILES[0]}" ]]; then
-            {
-              printf 'files<<EOF\n'
-              printf '%s\n' "${CHANGED_FILES[@]}"
-              printf 'EOF\n'
-              echo 'any_changed=true'
-            } >> "$GITHUB_OUTPUT"
+            # shellcheck source=.github/scripts/qc-write-multiline-output.sh
+            source .github/scripts/qc-write-multiline-output.sh
+            qc_write_multiline_output files "${CHANGED_FILES[@]}"
+            echo 'any_changed=true' >> "$GITHUB_OUTPUT"
           else
             echo 'any_changed=false' >> "$GITHUB_OUTPUT"
           fi
@@ -757,12 +744,10 @@ jobs:
           )
           if [[ ${#CHANGED_FILES[@]} -gt 0 ]] && \
             [[ -n "${CHANGED_FILES[0]}" ]]; then
-            {
-              printf 'files<<EOF\n'
-              printf '%s\n' "${CHANGED_FILES[@]}"
-              printf 'EOF\n'
-              echo 'any_changed=true'
-            } >> "$GITHUB_OUTPUT"
+            # shellcheck source=.github/scripts/qc-write-multiline-output.sh
+            source .github/scripts/qc-write-multiline-output.sh
+            qc_write_multiline_output files "${CHANGED_FILES[@]}"
+            echo 'any_changed=true' >> "$GITHUB_OUTPUT"
           else
             echo 'any_changed=false' >> "$GITHUB_OUTPUT"
           fi
@@ -831,12 +816,10 @@ jobs:
           )
           if [[ ${#CHANGED_FILES[@]} -gt 0 ]] && \
             [[ -n "${CHANGED_FILES[0]}" ]]; then
-            {
-              printf 'files<<EOF\n'
-              printf '%s\n' "${CHANGED_FILES[@]}"
-              printf 'EOF\n'
-              echo 'any_changed=true'
-            } >> "$GITHUB_OUTPUT"
+            # shellcheck source=.github/scripts/qc-write-multiline-output.sh
+            source .github/scripts/qc-write-multiline-output.sh
+            qc_write_multiline_output files "${CHANGED_FILES[@]}"
+            echo 'any_changed=true' >> "$GITHUB_OUTPUT"
           else
             echo 'any_changed=false' >> "$GITHUB_OUTPUT"
           fi
@@ -909,12 +892,10 @@ jobs:
           )
           if [[ ${#CHANGED_FILES[@]} -gt 0 ]] && \
             [[ -n "${CHANGED_FILES[0]}" ]]; then
-            {
-              printf 'files<<EOF\n'
-              printf '%s\n' "${CHANGED_FILES[@]}"
-              printf 'EOF\n'
-              echo 'any_changed=true'
-            } >> "$GITHUB_OUTPUT"
+            # shellcheck source=.github/scripts/qc-write-multiline-output.sh
+            source .github/scripts/qc-write-multiline-output.sh
+            qc_write_multiline_output files "${CHANGED_FILES[@]}"
+            echo 'any_changed=true' >> "$GITHUB_OUTPUT"
           else
             echo 'any_changed=false' >> "$GITHUB_OUTPUT"
           fi
@@ -985,12 +966,10 @@ jobs:
           )
           if [[ ${#CHANGED_FILES[@]} -gt 0 ]] && \
             [[ -n "${CHANGED_FILES[0]}" ]]; then
-            {
-              printf 'files<<EOF\n'
-              printf '%s\n' "${CHANGED_FILES[@]}"
-              printf 'EOF\n'
-              echo 'any_changed=true'
-            } >> "$GITHUB_OUTPUT"
+            # shellcheck source=.github/scripts/qc-write-multiline-output.sh
+            source .github/scripts/qc-write-multiline-output.sh
+            qc_write_multiline_output files "${CHANGED_FILES[@]}"
+            echo 'any_changed=true' >> "$GITHUB_OUTPUT"
           else
             echo 'any_changed=false' >> "$GITHUB_OUTPUT"
           fi
@@ -1054,12 +1033,10 @@ jobs:
           )
           if [[ ${#CHANGED_FILES[@]} -gt 0 ]] && \
             [[ -n "${CHANGED_FILES[0]}" ]]; then
-            {
-              printf 'files<<EOF\n'
-              printf '%s\n' "${CHANGED_FILES[@]}"
-              printf 'EOF\n'
-              echo 'any_changed=true'
-            } >> "$GITHUB_OUTPUT"
+            # shellcheck source=.github/scripts/qc-write-multiline-output.sh
+            source .github/scripts/qc-write-multiline-output.sh
+            qc_write_multiline_output files "${CHANGED_FILES[@]}"
+            echo 'any_changed=true' >> "$GITHUB_OUTPUT"
           else
             echo 'any_changed=false' >> "$GITHUB_OUTPUT"
           fi

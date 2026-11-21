@@ -124,14 +124,10 @@ jobs:
             html_paths+=( "${path}" )
           done
 
-          {
-            printf 'remote_urls<<EOF\n'
-            printf '%s\n' "${remote_urls[@]}"
-            printf 'EOF\n'
-            printf 'html_paths<<EOF\n'
-            printf '%s\n' "${html_paths[@]}"
-            printf 'EOF\n'
-          } >> "$GITHUB_OUTPUT"
+          # shellcheck source=.github/scripts/qc-write-multiline-output.sh
+          source .github/scripts/qc-write-multiline-output.sh
+          qc_write_multiline_output remote_urls "${remote_urls[@]}"
+          qc_write_multiline_output html_paths "${html_paths[@]}"
 
           if [[ ${#remote_urls[@]} -eq 0 && ${#html_paths[@]} -eq 0 ]]; then
             echo 'any_targets=false' >> "$GITHUB_OUTPUT"
@@ -210,11 +206,9 @@ jobs:
             echo "Lighthouse requires at least one URL in urls."
             exit 1
           fi
-          {
-            printf 'list<<EOF\n'
-            printf '%s\n' "${urls[@]}"
-            printf 'EOF\n'
-          } >> "$GITHUB_OUTPUT"
+          # shellcheck source=.github/scripts/qc-write-multiline-output.sh
+          source .github/scripts/qc-write-multiline-output.sh
+          qc_write_multiline_output list "${urls[@]}"
 
       - name: 'Write Lighthouse CI config'
         run: |

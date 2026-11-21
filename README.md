@@ -206,7 +206,7 @@ config is used instead of the generated accessibility-only defaults.
 | **ESLint**        | `.js`, `.jsx`, `.ts`, `.tsx`      | Installs `npm ci` when `package.json` exists      |
 | **golangci-lint** | Go packages                       | `--new-from-rev` on PR diff                       |
 | **Hadolint**      | `Dockerfile`, `*.dockerfile`      | Dockerfile best practices                         |
-| **jq**            | `.json`                           | Syntax validation (`jq -e`)                       |
+| **jq**            | `.json`                           | Syntax validation (`jq empty`)                    |
 | **Markdownlint**  | `.md`, `.markdown`                | markdownlint-cli2                                 |
 | **Prettier**      | JS/TS, JSON, CSS, MD              | Format check; honors `.prettierignore` (not YAML) |
 | **Ruff**          | `.py`, `.pyw`                     | Python lint                                       |
