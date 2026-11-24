@@ -56,6 +56,15 @@ on:
         required: false
         default: '0.9'
         type: string
+      lighthouse_temporary_public_storage:
+        description: >
+          Upload the Lighthouse report to publicly readable temporary
+          storage. Off by default: reports of private pages must not become
+          public. The report is still saved as a private run artifact via
+          uploadArtifacts. Opt in only for audited pages that are public.
+        required: false
+        default: false
+        type: boolean
       static_server_port:
         description: Port for the ephemeral static file server.
         required: false
@@ -241,7 +250,14 @@ jobs:
             echo 'Using repository Lighthouse CI config'
             exit 0
           fi
-          jq -n --argjson min "${QC_LHCI_MIN_SCORE}" \
+          min_score="${QC_LHCI_MIN_SCORE//[[:space:]]/}"
+          if ! [[ "${min_score}" =~ ^[0-9]+(\.[0-9]+)?$ ]] ||
+            ! awk -v n="${min_score}" 'BEGIN { exit (n < 0 || n > 1) }'; then
+            echo "lighthouse_min_accessibility must be a number" \
+              "between 0 and 1; got '${QC_LHCI_MIN_SCORE}'" >&2
+            exit 1
+          fi
+          jq -n --argjson min "${min_score}" \
             '{
               ci: {
                 collect: {
@@ -265,4 +281,5 @@ jobs:
           urls: |
             ${{ steps.urls.outputs.list }}
           uploadArtifacts: true
-          temporaryPublicStorage: true
+          # yamllint disable-line rule:line-length
+          temporaryPublicStorage: ${{ inputs.lighthouse_temporary_public_storage }}

@@ -22,7 +22,8 @@ resolve_chromedriver() {
 }
 
 qc_axe_setup() {
-	npm install -g @axe-core/cli
+	# Pinned so breaking releases cannot land in consumer runs overnight.
+	npm install -g @axe-core/cli@4.14.0
 
 	echo 'Syncing ChromeDriver with installed Chrome (browser-driver-manager)…'
 	npx --yes browser-driver-manager@2.0.1 install chrome

@@ -190,19 +190,24 @@ declared as `token` rather than `GITHUB_TOKEN`.
 
 ## Accessibility inputs
 
-| Parameter                      | Type    | Default   | Description                                           |
-| ------------------------------ | ------- | --------- | ----------------------------------------------------- |
-| `diff_base`                    | string  | _(empty)_ | Git ref for changed `.html` detection                 |
-| `node_version`                 | string  | `24`      | Node.js for axe-core CLI                              |
-| `axe_run`                      | boolean | `false`   | Run axe-core audits                                   |
-| `lighthouse_run`               | boolean | `false`   | Run Lighthouse CI (accessibility category)            |
-| `urls`                         | string  | _(empty)_ | URLs to audit (one per line; required for Lighthouse) |
-| `local_html_paths`             | string  | _(empty)_ | Extra repo HTML paths served locally for axe          |
-| `lighthouse_min_accessibility` | string  | `0.9`     | Minimum Lighthouse accessibility score (0–1)          |
-| `static_server_port`           | string  | `8765`    | Port for local HTML serving                           |
+| Parameter                             | Type    | Default   | Description                                              |
+| ------------------------------------- | ------- | --------- | -------------------------------------------------------- |
+| `diff_base`                           | string  | _(empty)_ | Git ref for changed `.html` detection                    |
+| `node_version`                        | string  | `24`      | Node.js for axe-core CLI                                 |
+| `axe_run`                             | boolean | `false`   | Run axe-core audits                                      |
+| `lighthouse_run`                      | boolean | `false`   | Run Lighthouse CI (accessibility category)               |
+| `urls`                                | string  | _(empty)_ | URLs to audit (one per line; required for Lighthouse)    |
+| `local_html_paths`                    | string  | _(empty)_ | Extra repo HTML paths served locally for axe             |
+| `lighthouse_min_accessibility`        | string  | `0.9`     | Minimum Lighthouse accessibility score (0–1)             |
+| `lighthouse_temporary_public_storage` | boolean | `false`   | Upload the Lighthouse report to public temporary storage |
+| `static_server_port`                  | string  | `8765`    | Port for local HTML serving                              |
 
 If the consumer repo already has `lighthouserc.json` or `lighthouserc.js`, that
 config is used instead of the generated accessibility-only defaults.
+
+The Lighthouse report is always saved as a private workflow-run artifact.
+`lighthouse_temporary_public_storage` additionally uploads it to publicly
+readable temporary storage; opt in only when the audited pages are public.
 
 ## Supported linters
 
