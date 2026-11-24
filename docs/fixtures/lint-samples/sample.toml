@@ -1,0 +1,5 @@
+# Clean sample: exercises the Taplo job.
+
+[package]
+name = "lint-samples"
+version = "1.0.0"

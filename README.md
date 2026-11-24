@@ -14,9 +14,9 @@
 </p>
 
 <p align="center">
-    Linters run opt-in checks only on changed files. Accessibility Audits run
-    axe-core and Lighthouse CI against deployed URLs and/or local HTML — tuned
-    for fast, actionable feedback in pull requests.
+    Linters turn themselves on from the pull-request diff. Accessibility
+    Audits run axe-core and Lighthouse CI against deployed URLs and/or local
+    HTML — tuned for fast, actionable feedback in pull requests.
 </p>
 
 <p align="center">
@@ -53,10 +53,10 @@
 </p>
 
 <p align="center">
-    ✓ Opt-in linters &nbsp;
+    ✓ Auto-detected linters &nbsp;
     ✓ Changed-files only &nbsp;
+    ✓ One required check &nbsp;
     ✓ axe-core + Lighthouse &nbsp;
-    ✓ Consumer-friendly inputs &nbsp;
     ✓ MIT licensed
 </p>
 
@@ -73,8 +73,9 @@ for pull requests:
 | **Linters**              | [`quality-checks.yaml`](./.github/workflows/quality-checks.yaml)             | Language and config linters on the PR diff   |
 | **Accessibility Audits** | [`accessibility-checks.yaml`](./.github/workflows/accessibility-checks.yaml) | axe-core and Lighthouse accessibility audits |
 
-Each tool is **opt-in** (`*_run` defaults to `false`). Jobs no-op when nothing
-relevant changed, keeping runs fast.
+A `detect` job classifies the pull-request diff, and each tool job turns
+itself on when its files changed. Branch protection only needs one required
+check per workflow: the stable **`checks`** summary job.
 
 ## Quick start
 
@@ -88,23 +89,9 @@ on: pull_request
 jobs:
   linters:
     name: 'Linters'
-    uses: garretpatten/quality-checks/.github/workflows/quality-checks.yaml@master
+    uses: garretpatten/quality-checks/.github/workflows/quality-checks.yaml@v2
     with:
       diff_base: ${{ github.event.pull_request.base.sha }}
-      editorconfig_run: true
-      eslint_run: true
-      hadolint_run: true
-      jq_run: true
-      markdownlint_run: true
-      prettier_run: true
-      ruff_run: true
-      shellcheck_run: true
-      shfmt_run: true
-      taplo_run: true
-      typos_run: true
-      yamllint_run: true
-    secrets:
-      token: ${{ secrets.GITHUB_TOKEN }}
 ```
 
 ### Accessibility Audits
@@ -117,10 +104,8 @@ on: pull_request
 jobs:
   accessibility:
     name: 'Accessibility Audits'
-    uses: garretpatten/quality-checks/.github/workflows/accessibility-checks.yaml@master
+    uses: garretpatten/quality-checks/.github/workflows/accessibility-checks.yaml@v2
     with:
-      axe_run: true
-      lighthouse_run: true
       urls: |
         https://your-preview.example.com/
       local_html_paths: |
@@ -128,111 +113,138 @@ jobs:
       lighthouse_min_accessibility: '0.9'
 ```
 
-**Pin a commit SHA** instead of `@master` for supply-chain control:
+**Pin a commit SHA** instead of a tag for supply-chain control:
 
 ```yaml
 uses: garretpatten/quality-checks/.github/workflows/quality-checks.yaml@<full-commit-sha>
 ```
 
-The reusable workflows check out this repository at `job.workflow_sha` into
-`.qc-tooling` so the helper scripts under `.github/scripts/` are available
-when the caller is a different repository. Callers do not need to vendor
-those scripts. The ref you pin (a commit SHA or `@master`) selects both the
-workflow and the matching helpers.
+No secrets are needed. The workflows never accept `secrets: inherit`; they
+run with the automatically generated read-only `github.token` scope.
+
+The reusable workflows also check out this repository at
+`job.workflow_sha` into `.qc-tooling` so the helper scripts under
+`.github/scripts/` are available when the caller is a different
+repository. Callers do not need to vendor those scripts. The ref you pin
+(a commit SHA or `@v2`) selects both the workflow and the matching
+helpers.
+
+### One required check
+
+Require a single context per workflow in branch protection — the names are
+stable even as tools are added or removed:
+
+- **`Quality Checks / checks`**
+- **`Accessibility Checks / checks`** (optional)
+
+The summary job reports success when every applicable tool job passed and
+every skipped job was intentionally skipped (GitHub's skipped-but-required
+checks pattern).
 
 ### Comparing against the correct base commit
 
-By default, workflows diff against `origin/main`, then `origin/master`, otherwise
-`HEAD~1`. For pull requests, pin the merge base:
+By default the workflows auto-detect the default branch of `origin` (any
+name, not just `main`/`master`) and diff the merge base. For pull requests,
+pin the merge base explicitly:
 
 ```yaml
 with:
   diff_base: ${{ github.event.pull_request.base.sha }}
 ```
 
+When auto-detection fails, the workflow falls back to `origin/main`, then
+`origin/master`, then `HEAD~1`, emitting a `::warning::` annotation so
+under-linting is never silent.
+
+## How tools turn on
+
+The `detect` job diffs the pull request (added/copied/modified/renamed
+files, vendor and build-output paths excluded) and classifies each path:
+
+| Changed files                                               | Jobs started                  |
+| ----------------------------------------------------------- | ----------------------------- |
+| `.js` `.jsx` `.ts` `.tsx` `.mjs` `.cjs` `.mts` `.cts`       | ESLint, Prettier              |
+| `.json`                                                     | Prettier, jq                  |
+| `.md` `.markdown`                                           | Prettier, markdownlint, typos |
+| `.css` `.scss`                                              | Prettier                      |
+| `.yaml` `.yml`                                              | yamllint                      |
+| `.sh` `.bash` `.zsh`, shebang-detected extensionless        | ShellCheck, shfmt             |
+| `.py` `.pyw`                                                | Ruff                          |
+| `.toml`                                                     | Taplo                         |
+| `Dockerfile`, `*.dockerfile`                                | Hadolint                      |
+| `.go`                                                       | golangci-lint                 |
+| `.github/workflows/*.yaml`                                  | actionlint                    |
+| `.lua`                                                      | StyLua                        |
+| `.txt` `.rst` `.adoc` `.html`, `LICENSE`/`COPYING`/`NOTICE` | typos                         |
+| any changed file                                            | EditorConfig                  |
+
+A PR touching only `init.lua` runs exactly two tool jobs (StyLua,
+EditorConfig) plus `detect` and `checks`; a PR touching nothing relevant
+runs `detect` and `checks` only.
+
 ## Linter inputs
 
-| Parameter           | Type    | Default     | Description                                   |
-| ------------------- | ------- | ----------- | --------------------------------------------- |
-| `diff_base`         | string  | _(empty)_   | Git ref to diff against                       |
-| `node_version`      | string  | `24`        | Node.js for ESLint, markdownlint, Prettier    |
-| `go_version`        | string  | `stable`    | Go toolchain for golangci-lint                |
-| `stylua_args`       | string  | `--check .` | Arguments for StyLua                          |
-| `stylua_version`    | string  | `v2.4.1`    | StyLua release tag                            |
-| `editorconfig_run`  | boolean | `false`     | EditorConfig consistency                      |
-| `eslint_run`        | boolean | `false`     | ESLint (JS/TS)                                |
-| `golangci_lint_run` | boolean | `false`     | golangci-lint (`--new-from-rev`)              |
-| `hadolint_run`      | boolean | `false`     | Dockerfile linter                             |
-| `jq_run`            | boolean | `false`     | JSON syntax validation                        |
-| `markdownlint_run`  | boolean | `false`     | Markdownlint-cli2                             |
-| `prettier_run`      | boolean | `false`     | Prettier format check                         |
-| `ruff_run`          | boolean | `false`     | Ruff (Python)                                 |
-| `shellcheck_run`    | boolean | `false`     | ShellCheck                                    |
-| `shfmt_run`         | boolean | `false`     | shfmt shell formatting                        |
-| `stylua_run`        | boolean | `false`     | StyLua (Lua)                                  |
-| `taplo_run`         | boolean | `false`     | Taplo (TOML)                                  |
-| `typos_run`         | boolean | `false`     | typos spell checker                           |
-| `typos_config`      | string  | _(empty)_   | Path to `typos.toml` (auto-detected if empty) |
-| `yamllint_run`      | boolean | `false`     | Yamllint                                      |
+| Parameter   | Type   | Default   | Description                                                    |
+| ----------- | ------ | --------- | -------------------------------------------------------------- |
+| `diff_base` | string | _(empty)_ | Git ref to diff against; empty auto-detects the default branch |
 
-## Linter secrets
+Tool versions are pinned in the workflow file (one `QC_*_VERSION` env
+block) and updated deliberately via PRs — consumer runs are reproducible
+and cannot break overnight from an upstream release.
 
-| Parameter | Type   | Default   | Description                                         |
-| --------- | ------ | --------- | --------------------------------------------------- |
-| `token`   | string | _(empty)_ | GitHub token for API access (StyLua version lookup) |
+### Repo-local tool resolution
 
-The token is optional; when not passed, the workflow falls back to the run's
-automatically generated `github.token`. Callers should pass
-`${{ secrets.GITHUB_TOKEN }}` explicitly, following the principle of least
-privilege instead of `secrets: inherit`. Note: secret ids may not start
-with the reserved `GITHUB_` prefix (case insensitive), so the secret is
-declared as `token` rather than `GITHUB_TOKEN`.
+Node-based jobs prefer the repository's own pinned tools: when
+`node_modules` contains the tool after dependency install, the job runs
+`npx --no-install <tool>`; otherwise it falls back to the pinned global.
+Dependencies are installed with `npm ci` when a lockfile exists, with
+`npm install --no-save` otherwise, and skipped without `package.json`.
 
 ## Accessibility inputs
 
 | Parameter                             | Type    | Default   | Description                                              |
 | ------------------------------------- | ------- | --------- | -------------------------------------------------------- |
 | `diff_base`                           | string  | _(empty)_ | Git ref for changed `.html` detection                    |
-| `node_version`                        | string  | `24`      | Node.js for axe-core CLI                                 |
-| `axe_run`                             | boolean | `false`   | Run axe-core audits                                      |
-| `lighthouse_run`                      | boolean | `false`   | Run Lighthouse CI (accessibility category)               |
 | `urls`                                | string  | _(empty)_ | URLs to audit (one per line; required for Lighthouse)    |
-| `local_html_paths`                    | string  | _(empty)_ | Extra repo HTML paths served locally for axe             |
+| `local_html_paths`                    | string  | _(empty)_ | Newline-separated repo HTML paths served locally for axe |
 | `lighthouse_min_accessibility`        | string  | `0.9`     | Minimum Lighthouse accessibility score (0–1)             |
 | `lighthouse_temporary_public_storage` | boolean | `false`   | Upload the Lighthouse report to public temporary storage |
-| `static_server_port`                  | string  | `8765`    | Port for local HTML serving                              |
 
-If the consumer repo already has `lighthouserc.json` or `lighthouserc.js`, that
-config is used instead of the generated accessibility-only defaults.
+axe-core runs when the PR changes HTML or `local_html_paths` is set;
+Lighthouse runs when `urls` is set. The Lighthouse report is always saved
+as a private workflow-run artifact. `lighthouse_temporary_public_storage`
+additionally uploads it to publicly readable temporary storage; opt in
+only when the audited pages are public.
 
-The Lighthouse report is always saved as a private workflow-run artifact.
-`lighthouse_temporary_public_storage` additionally uploads it to publicly
-readable temporary storage; opt in only when the audited pages are public.
+If the consumer repo already has `lighthouserc.json` or `lighthouserc.js`,
+that config is used instead of the generated accessibility-only defaults.
 
 ## Supported linters
 
 | Tool              | Files                             | Notes                                             |
 | ----------------- | --------------------------------- | ------------------------------------------------- |
 | **EditorConfig**  | Changed text files                | Uses `ec`; respects `.editorconfig`               |
-| **ESLint**        | `.js`, `.jsx`, `.ts`, `.tsx`      | Installs `npm ci` when `package.json` exists      |
+| **actionlint**    | `.github/workflows/*.yaml`        | GitHub Actions schema and expression checks       |
+| **ESLint**        | `.js`, `.mjs`, `.cjs`, `.ts`, …   | Prefers the repo's local install, then pinned 10  |
 | **golangci-lint** | Go packages                       | `--new-from-rev` on PR diff                       |
 | **Hadolint**      | `Dockerfile`, `*.dockerfile`      | Dockerfile best practices                         |
 | **jq**            | `.json`                           | Syntax validation (`jq empty`)                    |
 | **Markdownlint**  | `.md`, `.markdown`                | markdownlint-cli2                                 |
 | **Prettier**      | JS/TS, JSON, CSS, MD              | Format check; honors `.prettierignore` (not YAML) |
 | **Ruff**          | `.py`, `.pyw`                     | Python lint                                       |
-| **ShellCheck**    | `.sh`, `.bash`, `.zsh`            | Shell analysis (runner image binary)              |
-| **shfmt**         | `.sh`, `.bash`, `.zsh`            | Shell formatting (`-d`)                           |
-| **StyLua**        | Lua (via `stylua_args`)           | Whole-tree or path-scoped                         |
+| **ShellCheck**    | `.sh`, `.bash`, `.zsh`, shebangs  | Shell analysis (runner image binary)              |
+| **shfmt**         | `.sh`, `.bash`, `.zsh`, shebangs  | Shell formatting (`-d`)                           |
+| **StyLua**        | `.lua` in the diff                | `--check` on changed files only                   |
 | **Taplo**         | `.toml`                           | TOML lint                                         |
 | **typos**         | `.md`, `.txt`, `.rst`, `.html`, … | Prose spell check; uses your repo’s `typos.toml`  |
 | **Yamllint**      | `.yml`, `.yaml`                   | General YAML lint                                 |
 
 ### typos.toml in consumer repositories
 
-When `typos_run: true`, the job checks out **your** repository and runs `typos` from
-its root. Your `typos.toml` (or `_typos.toml` / `.typos.toml`) is loaded automatically
-so you can allow names, product terms, and other valid words:
+The typos job checks out **your** repository and runs `typos` from its
+root. Your `typos.toml` (or `_typos.toml` / `.typos.toml`) is loaded
+automatically so you can allow names, product terms, and other valid
+words:
 
 ```toml
 [default.extend-words]
@@ -240,9 +252,8 @@ Patten = "Patten"
 MyProduct = "MyProduct"
 ```
 
-Copy [docs/typos.toml.example](./docs/typos.toml.example) as a starting point. For a
-config file outside the root, pass `typos_config: path/to/typos.toml` in the workflow
-`with:` block.
+Copy [docs/typos.toml.example](./docs/typos.toml.example) as a starting
+point.
 
 ### Intentional overlap (not redundant)
 
@@ -259,6 +270,30 @@ Biome-as-full-replacement) or need heavy language SDKs (RuboCop, Clippy, `terraf
 are out of scope so the workflow stays maintainable. Open an issue if you need a
 narrow, high-signal addition.
 
+## Self-test fixtures
+
+`docs/fixtures/lint-samples/` contains clean sample files (JS, Python,
+shell, Dockerfile, TOML, Lua, JSON, Markdown, workflow YAML). A PR that
+touches the fixture directory forces every linter's **real** path in this
+repo's own CI. A weekly scheduled self-test lints the diff against the
+pre-fixtures commit, so the fixture coverage runs even when no PR touches
+the directory.
+
+## Migration from v1
+
+- The 14 `*_run` boolean inputs (`eslint_run`, `markdownlint_run`, …) are
+  no longer accepted — tools auto-enable from the diff, which is the
+  point. Remove them from your `with:` block.
+- `typos_config`, `stylua_args`, `stylua_version`, `go_version`,
+  `node_version`, and `static_server_port` inputs were removed; sensible
+  pinned defaults are built in.
+- The optional `token` secret was removed — StyLua is now a pinned binary
+  download, so the workflows need no secrets at all.
+- `urls` no longer accepts comma-separated values — one URL per line only
+  (matching `local_html_paths`).
+- Require the single **`Quality Checks / checks`** context in branch
+  protection instead of the individual job names.
+
 ## Accessibility
 
 | Job            | Tool                                                           | When to use                                                     |
@@ -268,8 +303,8 @@ narrow, high-signal addition.
 
 ### Typical patterns
 
-- **Static site / docs**: set `axe_run: true` and rely on changed `.html` plus
-  optional `local_html_paths`.
+- **Static site / docs**: rely on changed `.html` plus optional
+  `local_html_paths`.
 - **Web app with preview**: pass the preview URL in `urls` for both axe and
   Lighthouse.
 - **Production smoke**: `urls` only, on a schedule or after deploy (call the

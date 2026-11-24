@@ -13,35 +13,61 @@ teardown() {
 	common_teardown
 }
 
+# qc_resolve_base must be called directly (not via run) so BASE_REF
+# propagates. Output (warning annotations) is captured to a log file.
+qc_resolve_base_logged() {
+	local log="$1"
+	qc_resolve_base >"${log}" 2>&1
+}
+
+refute_warning_logged() {
+	if grep -q '::warning::' "$1"; then
+		fail "unexpected ::warning:: in $1: $(cat "$1")"
+	fi
+}
+
 @test "qc_resolve_base prefers QC_DIFF_BASE over origin/main" {
 	init_git_repo "${SANDBOX}/repo" main origin
 	cd "${SANDBOX}/repo"
 	export QC_DIFF_BASE="abc123"
-	qc_resolve_base
+	qc_resolve_base_logged "${SANDBOX}/out.log"
+	refute_warning_logged "${SANDBOX}/out.log"
 	assert_equal "${BASE_REF}" "abc123"
 }
 
-@test "qc_resolve_base uses origin/main when QC_DIFF_BASE is empty" {
+@test "qc_resolve_base auto-detects origin/main when QC_DIFF_BASE is empty" {
 	init_git_repo "${SANDBOX}/repo" main origin
 	cd "${SANDBOX}/repo"
 	unset QC_DIFF_BASE
-	qc_resolve_base
+	qc_resolve_base_logged "${SANDBOX}/out.log"
+	refute_warning_logged "${SANDBOX}/out.log"
 	assert_equal "${BASE_REF}" "origin/main"
 }
 
-@test "qc_resolve_base uses origin/master when main is missing" {
+@test "qc_resolve_base auto-detects origin/master when main is missing" {
 	init_git_repo "${SANDBOX}/repo" master origin
 	cd "${SANDBOX}/repo"
 	unset QC_DIFF_BASE
-	qc_resolve_base
+	qc_resolve_base_logged "${SANDBOX}/out.log"
+	refute_warning_logged "${SANDBOX}/out.log"
 	assert_equal "${BASE_REF}" "origin/master"
 }
 
-@test "qc_resolve_base falls back to HEAD~1 when no default remote branch exists" {
+@test "qc_resolve_base auto-detects non-main/master default branches" {
+	init_git_repo "${SANDBOX}/repo" develop origin
+	cd "${SANDBOX}/repo"
+	unset QC_DIFF_BASE
+	qc_resolve_base_logged "${SANDBOX}/out.log"
+	refute_warning_logged "${SANDBOX}/out.log"
+	assert_equal "${BASE_REF}" "origin/develop"
+}
+
+@test "qc_resolve_base falls back to HEAD~1 with a warning when no remote default exists" {
 	init_git_repo "${SANDBOX}/repo" develop
 	cd "${SANDBOX}/repo"
 	unset QC_DIFF_BASE
-	qc_resolve_base
+	qc_resolve_base_logged "${SANDBOX}/out.log"
+	assert_file_contains "${SANDBOX}/out.log" '::warning::'
 	assert_equal "${BASE_REF}" "HEAD~1"
 }
 

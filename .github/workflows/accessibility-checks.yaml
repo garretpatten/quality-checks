@@ -14,39 +14,22 @@ on:
       diff_base:
         description: >
           Git ref to diff against (SHA or branch), e.g.
-          github.event.pull_request.base.sha. When empty, uses origin/main,
-          origin/master, or HEAD~1.
+          github.event.pull_request.base.sha. When empty, the default
+          branch of origin is auto-detected (any name).
         required: false
         default: ''
         type: string
-      node_version:
-        description: Node.js version for axe-core and Lighthouse CI tooling.
-        required: false
-        default: '24'
-        type: string
-      axe_run:
-        description: >
-          Run axe-core accessibility audits (deployed URLs and/or local HTML).
-        required: false
-        default: false
-        type: boolean
-      lighthouse_run:
-        description: >
-          Run Lighthouse CI with an accessibility score gate on `urls`.
-        required: false
-        default: false
-        type: boolean
       urls:
         description: >
-          URLs to audit (one per line). Required for Lighthouse when enabled.
-          Also used by axe for deployed previews or production pages.
+          URLs to audit (one per line). Required for Lighthouse. Also used
+          by axe for deployed previews or production pages.
         required: false
         default: ''
         type: string
       local_html_paths:
         description: >
-          Newline-separated repo-relative HTML paths to audit via a local static
-          server (merged with changed `.html` files in the PR diff).
+          Newline-separated repo-relative HTML paths to audit via a local
+          static server (merged with changed `.html` files in the PR diff).
         required: false
         default: ''
         type: string
@@ -65,20 +48,16 @@ on:
         required: false
         default: false
         type: boolean
-      static_server_port:
-        description: Port for the ephemeral static file server.
-        required: false
-        default: '8765'
-        type: string
 
 env:
   QC_DIFF_BASE: ${{ inputs.diff_base }}
-  QC_STATIC_PORT: ${{ inputs.static_server_port }}
+  QC_STATIC_PORT: '8765'
+  # Pinned serve version for the ephemeral local static server.
+  QC_SERVE_VERSION: '14.2.6'
 
 jobs:
-  axe:
-    if: ${{ inputs.axe_run == true }}
-    name: 'axe-core - Accessibility Audit'
+  detect:
+    name: 'Detect Audit Targets'
     runs-on: ubuntu-latest
     env:
       QC_SCRIPTS: ${{ github.workspace }}/.qc-tooling/.github/scripts
@@ -103,28 +82,16 @@ jobs:
           persist-credentials: false
           sparse-checkout: .github/scripts
 
-      - name: 'Setup Node.js'
-        # actions/setup-node v7.1.0
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
-        with:
-          node-version: ${{ inputs.node_version }}
-
-      - name: 'Install axe-core and sync ChromeDriver'
-        run: |
-          set -euo pipefail
-          # shellcheck source=.github/scripts/qc-axe-setup.sh
-          source "${QC_SCRIPTS}/qc-axe-setup.sh"
-
       - name: 'Collect audit targets'
         id: targets
         run: |
           set -euo pipefail
           cd "$GITHUB_WORKSPACE"
+          # shellcheck source=.github/scripts/qc-resolve-base.sh
           source "${QC_SCRIPTS}/qc-resolve-base.sh"
 
           mapfile -t remote_urls < <(
             printf '%s\n' "${QC_URLS}" |
-              tr ',' '\n' |
               sed '/^[[:space:]]*$/d' || true
           )
 
@@ -135,7 +102,8 @@ jobs:
 
           mapfile -t changed_html < <(
             git diff --name-only --diff-filter=ACMR "${BASE_REF}"...HEAD |
-              grep -E '\.html?$' || true
+              grep -E '\.html?$' |
+              "${QC_SCRIPTS}/qc-filter-changed-paths.sh" || true
           )
 
           html_paths=()
@@ -149,17 +117,60 @@ jobs:
           source "${QC_SCRIPTS}/qc-write-multiline-output.sh"
           qc_write_multiline_output remote_urls "${remote_urls[@]}"
           qc_write_multiline_output html_paths "${html_paths[@]}"
+          {
+            printf 'remote_count=%s\n' "${#remote_urls[@]}"
+            printf 'html_count=%s\n' "${#html_paths[@]}"
+          } >> "$GITHUB_OUTPUT"
 
-          if [[ ${#remote_urls[@]} -eq 0 && ${#html_paths[@]} -eq 0 ]]; then
-            echo 'any_targets=false' >> "$GITHUB_OUTPUT"
-          else
-            echo 'any_targets=true' >> "$GITHUB_OUTPUT"
-          fi
+    outputs:
+      remote_urls: ${{ steps.targets.outputs.remote_urls }}
+      remote_count: ${{ steps.targets.outputs.remote_count }}
+      html_paths: ${{ steps.targets.outputs.html_paths }}
+      html_count: ${{ steps.targets.outputs.html_count }}
+
+  axe:
+    name: 'axe-core - Accessibility Audit'
+    needs: detect
+    # yamllint disable-line rule:line-length
+    if: needs.detect.outputs.remote_count != '0' || needs.detect.outputs.html_count != '0'
+    runs-on: ubuntu-latest
+    env:
+      QC_SCRIPTS: ${{ github.workspace }}/.qc-tooling/.github/scripts
+
+    steps:
+      - name: 'Checkout Code'
+        # actions/checkout v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 1
+
+      # Helpers live in this repository, not in the caller checkout.
+      - name: 'Checkout quality-checks tooling'
+        # actions/checkout v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: .qc-tooling
+          persist-credentials: false
+          sparse-checkout: .github/scripts
+
+      - name: 'Setup Node.js'
+        # actions/setup-node v7.1.0
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: '24'
+
+      - name: 'Install axe-core and sync ChromeDriver'
+        run: |
+          set -euo pipefail
+          # shellcheck source=.github/scripts/qc-axe-setup.sh
+          source "${QC_SCRIPTS}/qc-axe-setup.sh"
 
       - name: 'Run axe on remote URLs'
-        if: steps.targets.outputs.any_targets == 'true'
+        if: needs.detect.outputs.remote_count != '0'
         env:
-          QC_REMOTE_URLS: ${{ steps.targets.outputs.remote_urls }}
+          QC_REMOTE_URLS: ${{ needs.detect.outputs.remote_urls }}
         run: |
           set -euo pipefail
           readarray -t remote_urls < <(printf '%s\n' "${QC_REMOTE_URLS}")
@@ -170,9 +181,9 @@ jobs:
           done
 
       - name: 'Run axe on local HTML'
-        if: steps.targets.outputs.any_targets == 'true'
+        if: needs.detect.outputs.html_count != '0'
         env:
-          QC_HTML_PATHS: ${{ steps.targets.outputs.html_paths }}
+          QC_HTML_PATHS: ${{ needs.detect.outputs.html_paths }}
         run: |
           set -euo pipefail
           cd "$GITHUB_WORKSPACE"
@@ -180,13 +191,22 @@ jobs:
           if [[ ${#html_paths[@]} -eq 0 ]] || [[ -z "${html_paths[0]}" ]]; then
             exit 0
           fi
-          npx --yes serve@14.2.6 -l "${QC_STATIC_PORT}" --no-clipboard . &
+          npx --yes "serve@${QC_SERVE_VERSION}" \
+            -l "${QC_STATIC_PORT}" --no-clipboard . &
           server_pid=$!
           cleanup() {
             kill "${server_pid}" 2>/dev/null || true
           }
           trap cleanup EXIT
-          sleep 2
+          # Poll until the local server answers instead of sleeping a
+          # fixed time; a connection refused is retried (issue #37 L3).
+          # A 404 for the root path is fine - only connectivity matters.
+          root_url="http://127.0.0.1:${QC_STATIC_PORT}/"
+          if ! curl --noproxy '*' --retry 30 --retry-delay 1 \
+            --retry-connrefused -s -o /dev/null "${root_url}"; then
+            echo 'Local static server did not become ready' >&2
+            exit 1
+          fi
           for path in "${html_paths[@]}"; do
             [[ -z "${path}" ]] && continue
             url="http://127.0.0.1:${QC_STATIC_PORT}/${path}"
@@ -194,16 +214,10 @@ jobs:
             axe --chromedriver-path "${CHROMEDRIVER_PATH}" "${url}" --exit
           done
 
-      - name: 'No audit targets'
-        if: steps.targets.outputs.any_targets != 'true'
-        run: |
-          echo 'No URLs or HTML paths to audit.'
-          echo 'Set urls and/or local_html_paths,'
-          echo 'or change HTML in the PR.'
-
   lighthouse:
-    if: ${{ inputs.lighthouse_run == true }}
     name: 'Lighthouse - Accessibility Audit'
+    needs: detect
+    if: ${{ inputs.urls != '' }}
     runs-on: ubuntu-latest
     env:
       QC_SCRIPTS: ${{ github.workspace }}/.qc-tooling/.github/scripts
@@ -232,7 +246,6 @@ jobs:
           set -euo pipefail
           mapfile -t urls < <(
             printf '%s\n' "${QC_URLS}" |
-              tr ',' '\n' |
               sed '/^[[:space:]]*$/d' || true
           )
           if [[ ${#urls[@]} -eq 0 ]] || [[ -z "${urls[0]}" ]]; then
@@ -283,3 +296,28 @@ jobs:
           uploadArtifacts: true
           # yamllint disable-line rule:line-length
           temporaryPublicStorage: ${{ inputs.lighthouse_temporary_public_storage }}
+
+  summary:
+    name: checks
+    needs:
+      - detect
+      - axe
+      - lighthouse
+    # Required-check pattern: the aggregate always runs so the context is
+    # reported even when audit jobs were skipped, and fails explicitly
+    # when any needed job failed or the run was cancelled.
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 'Fail on any failed or cancelled job'
+        # yamllint disable-line rule:line-length
+        if: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
+        run: |
+          echo 'At least one applicable accessibility check failed or' \
+            'the run was cancelled.' >&2
+          exit 1
+
+      - name: 'All applicable accessibility checks passed'
+        run: |
+          echo 'All applicable accessibility checks passed.'

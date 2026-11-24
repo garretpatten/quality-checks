@@ -1,5 +1,8 @@
-// Local-only directories that must not gate Markdown linting.
-// .tools/ is the untracked bats-core install from scripts/install-bats.sh.
+// Explicit globs (a config file without "globs" disables the default
+// "**/*.md" set). Local-only directories must not gate Markdown linting:
+// node_modules/ and .tools/ (the untracked bats-core install from
+// scripts/install-bats.sh) are excluded via negated globs. Note: config
+// globs reach globby raw, so negations use "!" (the CLI accepts "#").
 {
-  "ignore": [".tools/**"],
+  "globs": ["**/*.md", "!node_modules", "!.tools"],
 }

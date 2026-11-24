@@ -6,5 +6,8 @@ package-lock.json
 *.min.js
 *.snap
 
+# Local bats-core install (untracked; scripts/install-bats.sh).
+.tools/
+
 # YAML is owned by yamllint (Prettier and yamllint fight over quotes/wrapping).
 **/*.{yaml,yml}

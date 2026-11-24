@@ -1,0 +1,17 @@
+name: Sample Workflow
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sample:
+    name: 'Sample Job'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 'Say hello'
+        run: |
+          echo 'Hello, world!'
