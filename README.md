@@ -132,14 +132,15 @@ helpers.
 ### One required check
 
 Require a single context per workflow in branch protection — the names are
-stable even as tools are added or removed:
+stable even as tools are added or removed. The prefix is the calling job's
+display name; in this fleet that is:
 
-- **`Quality Checks / checks`**
-- **`Accessibility Checks / checks`** (optional)
+- **`Linters / checks`**
+- **`Accessibility Audits / checks`** (optional)
 
-The summary job reports success when every applicable tool job passed and
-every skipped job was intentionally skipped (GitHub's skipped-but-required
-checks pattern).
+The summary jobs always run (so the context is reported even when tool jobs
+were skipped) and fail explicitly when any needed job failed or the run was
+cancelled.
 
 ### Comparing against the correct base commit
 
@@ -291,7 +292,7 @@ the directory.
   download, so the workflows need no secrets at all.
 - `urls` no longer accepts comma-separated values — one URL per line only
   (matching `local_html_paths`).
-- Require the single **`Quality Checks / checks`** context in branch
+- Require the single **`Linters / checks`** context in branch
   protection instead of the individual job names.
 
 ## Accessibility
