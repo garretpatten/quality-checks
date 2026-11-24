@@ -86,7 +86,7 @@ host_tmp_has_chromedriver() {
 	assert_output --partial "CHROMEDRIVER_PATH=${SANDBOX}/bin/chromedriver"
 	assert_file_contains "${GITHUB_ENV}" \
 		"CHROMEDRIVER_PATH=${SANDBOX}/bin/chromedriver"
-	assert_stub_call '^npm install -g @axe-core/cli$'
+	assert_stub_call '^npm install -g @axe-core/cli@4.14.0$'
 	assert_stub_call '^npx --yes browser-driver-manager@2.0.1 install chrome$'
 	assert_stub_call '^google-chrome '
 }

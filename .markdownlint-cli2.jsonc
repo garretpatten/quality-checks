@@ -1,0 +1,5 @@
+// Local-only directories that must not gate Markdown linting.
+// .tools/ is the untracked bats-core install from scripts/install-bats.sh.
+{
+  "ignore": [".tools/**"],
+}
