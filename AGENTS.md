@@ -1,8 +1,8 @@
 # Agent guide — quality-checks
 
 Reusable GitHub Actions for **Linters** and **Accessibility Audits** on pull-request
-diffs. Keep workflows **opt-in**, **PR-scoped**, and **pinned to commit SHAs** for
-third-party actions.
+diffs. Tools are **auto-detected** from the PR diff, **PR-scoped**, and third-party
+actions are **pinned to commit SHAs**.
 
 ## Repository standards
 
@@ -34,30 +34,38 @@ metadata, CI and quality, and exceptions.
 
 ## Repository layout
 
-| Path                                          | Purpose                                            |
-| --------------------------------------------- | -------------------------------------------------- |
-| `.github/workflows/quality-checks.yaml`       | Reusable linter workflow                           |
-| `.github/workflows/accessibility-checks.yaml` | Reusable axe + Lighthouse workflow                 |
-| `.github/workflows/test-workflow.yaml`        | Self-test on PRs (both workflows)                  |
-| `.github/scripts/qc-resolve-base.sh`          | Shared diff-base resolution for jobs               |
-| `.github/scripts/qc-*.sh`                     | Shared helpers (path filter, typo args, axe setup) |
-| `scripts/lint-changed.sh`                     | Run local linters matching changed files           |
-| `scripts/install-bats.sh`                     | Install bats-core and helper libraries             |
-| `tests/`                                      | bats unit tests for the helper scripts             |
-| `docs/assets/`                                | Branding (logo SVG)                                |
-| `docs/fixtures/a11y-sample.html`              | axe self-test fixture                              |
+| Path                                          | Purpose                                                          |
+| --------------------------------------------- | ---------------------------------------------------------------- |
+| `.github/workflows/quality-checks.yaml`       | Reusable linter workflow (detect → tool jobs → summary)          |
+| `.github/workflows/accessibility-checks.yaml` | Reusable axe + Lighthouse workflow                               |
+| `.github/workflows/test-workflow.yaml`        | Self-test on PRs, pushes, and a weekly schedule                  |
+| `.github/scripts/qc-classify-changed.sh`      | Classify changed paths into per-tool lists (detect job)          |
+| `.github/scripts/qc-resolve-base.sh`          | Shared diff-base resolution (auto-detect + warning fallbacks)    |
+| `.github/scripts/qc-*.sh`                     | Shared helpers (path filter, typo args, axe setup, output write) |
+| `scripts/lint-changed.sh`                     | Run local linters matching changed files                         |
+| `scripts/install-bats.sh`                     | Install bats-core and helper libraries                           |
+| `tests/`                                      | bats unit tests for the helper scripts                           |
+| `docs/assets/`                                | Branding (logo SVG)                                              |
+| `docs/fixtures/a11y-sample.html`              | axe self-test fixture                                            |
+| `docs/fixtures/lint-samples/`                 | Clean per-language fixtures that force each linter's real path   |
 
 ## Workflow conventions
 
 1. **Pin actions** to full commit SHAs; let Dependabot open bump PRs.
 2. **Reusable workflow inputs** must stay documented in **README.md**; breaking
    renames need a migration note.
-3. **Shell in workflows**: quote variables, use `env:` for `${{ inputs.* }}` in
-   `run:` steps (never interpolate inputs directly into shell).
-4. **Changed-files pattern**: new linter jobs should use `.github/scripts/qc-resolve-base.sh`
-   and skip when no matching paths exist.
-5. **Line length**: `.yamllint` max 80 columns; `# yamllint disable-line` only for
-   long action SHAs.
+3. **Shell in workflows**: quote variables, use `env:` for `${{ inputs.* }}`,
+   `needs.*.outputs.*`, and `steps.*.outputs.*` in `run:` steps (never
+   interpolate untrusted or output values directly into shell).
+4. **Detection pattern**: the `detect` job (via `.github/scripts/qc-classify-changed.sh`)
+   is the single place that resolves the diff base, applies the vendor filter,
+   and classifies paths. Tool jobs gate on `needs.detect.outputs.<list>_count`
+   and receive file lists through `env:` — do not add per-job diff logic.
+5. **Pinned tool versions** live in one `QC_*_VERSION` env block at the top of
+   each workflow; bump them deliberately via PRs (Dependabot does not manage
+   `run:`-step installs).
+6. **Line length**: `.yamllint` max 80 columns; `# yamllint disable-line` only for
+   long action SHAs and required-check `if:` expressions.
 
 Do not commit unless the user asks.
 
@@ -162,14 +170,15 @@ LINT_BASE=origin/main ./scripts/lint-changed.sh
 
 ## Making changes
 
-| Task                              | Edit                                                      |
-| --------------------------------- | --------------------------------------------------------- |
-| Linter job / input                | `.github/workflows/quality-checks.yaml` + README          |
-| Accessibility job / input         | `.github/workflows/accessibility-checks.yaml` + README    |
-| Self-test                         | `.github/workflows/test-workflow.yaml`                    |
-| Shell unit tests                  | `tests/`, `scripts/install-bats.sh`, `test-workflow.yaml` |
-| Agent / contributor lint guidance | `AGENTS.md`, `CONTRIBUTING.md`, `scripts/lint-changed.sh` |
-| Community files                   | `SECURITY.md`, `CODE_OF_CONDUCT.md`, issue templates      |
+| Task                              | Edit                                                                    |
+| --------------------------------- | ----------------------------------------------------------------------- |
+| Linter job / detection mapping    | `.github/scripts/qc-classify-changed.sh`, `quality-checks.yaml`, README |
+| Accessibility job / input         | `.github/workflows/accessibility-checks.yaml` + README                  |
+| Self-test                         | `.github/workflows/test-workflow.yaml`                                  |
+| Shell unit tests                  | `tests/`, `scripts/install-bats.sh`, `test-workflow.yaml`               |
+| Tool version pins                 | `QC_*_VERSION` env blocks in the workflow files                         |
+| Agent / contributor lint guidance | `AGENTS.md`, `CONTRIBUTING.md`, `scripts/lint-changed.sh`               |
+| Community files                   | `SECURITY.md`, `CODE_OF_CONDUCT.md`, issue templates                    |
 
 ## License
 

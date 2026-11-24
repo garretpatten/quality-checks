@@ -14,152 +14,35 @@ on:
       diff_base:
         description: >
           Git ref to diff against (SHA or branch), e.g.
-          github.event.pull_request.base.sha. When empty, uses origin/main,
-          origin/master, or HEAD~1.
+          github.event.pull_request.base.sha. When empty, the default
+          branch of origin is auto-detected (any name); tools run on the
+          pull-request diff only.
         required: false
         default: ''
         type: string
-      node_version:
-        description: >
-          Node.js version for ESLint, markdownlint-cli2, Prettier, and
-          accessibility-related installs in sibling workflows.
-        required: false
-        default: '24'
-        type: string
-      go_version:
-        description: Go toolchain version for golangci-lint.
-        required: false
-        default: 'stable'
-        type: string
-      stylua_args:
-        description: >
-          Arguments passed to StyLua (e.g. "--check ." or
-          "--check config/nvim").
-        required: false
-        default: '--check .'
-        type: string
-      stylua_version:
-        description: StyLua release tag for JohnnyMorganz/stylua-action.
-        required: false
-        default: 'v2.4.1'
-        type: string
-      eslint_run:
-        description: >
-          Boolean flag indicating whether the eslint linter should be
-          executed.
-        required: false
-        default: false
-        type: boolean
-      hadolint_run:
-        description: >
-          Boolean flag indicating whether the hadolint linter should be
-          executed.
-        required: false
-        default: false
-        type: boolean
-      jq_run:
-        description: >
-          Boolean flag indicating whether the jq JSON validator should be
-          executed.
-        required: false
-        default: false
-        type: boolean
-      markdownlint_run:
-        description: >
-          Boolean flag indicating whether the markdownlint-cli2 linter should
-          be executed.
-        required: false
-        default: false
-        type: boolean
-      prettier_run:
-        description: >
-          Boolean flag indicating whether the Prettier formatting check should
-          be executed.
-        required: false
-        default: false
-        type: boolean
-      ruff_run:
-        description: >
-          Boolean flag indicating whether the ruff linter should be executed.
-        required: false
-        default: false
-        type: boolean
-      shellcheck_run:
-        description: >
-          Boolean flag indicating whether the shellcheck linter should be
-          executed.
-        required: false
-        default: false
-        type: boolean
-      stylua_run:
-        description: >
-          Boolean flag indicating whether the StyLua formatter check should be
-          executed.
-        required: false
-        default: false
-        type: boolean
-      taplo_run:
-        description: >
-          Boolean flag indicating whether the taplo linter should be executed.
-        required: false
-        default: false
-        type: boolean
-      yamllint_run:
-        description: >
-          Boolean flag indicating whether the yamllint linter should be
-          executed.
-        required: false
-        default: false
-        type: boolean
-      typos_run:
-        description: >
-          Boolean flag indicating whether the typos spell checker should be
-          executed.
-        required: false
-        default: false
-        type: boolean
-      typos_config:
-        description: >
-          Optional path to a typos config file in the consumer repository
-          (e.g. typos.toml). When empty, auto-detects typos.toml, _typos.toml,
-          or .typos.toml at the repository root.
-        required: false
-        default: ''
-        type: string
-      editorconfig_run:
-        description: >
-          Boolean flag indicating whether editorconfig-checker should be
-          executed.
-        required: false
-        default: false
-        type: boolean
-      shfmt_run:
-        description: >
-          Boolean flag indicating whether shfmt should check shell formatting.
-        required: false
-        default: false
-        type: boolean
-      golangci_lint_run:
-        description: >
-          Boolean flag indicating whether golangci-lint should be executed.
-        required: false
-        default: false
-        type: boolean
-    secrets:
-      token:
-        description: >
-          GitHub token for API access (e.g. StyLua version lookup). Callers
-          should pass their secrets.GITHUB_TOKEN value here. Optional: falls
-          back to the run's automatically generated token.
-        required: false
 
 env:
   QC_DIFF_BASE: ${{ inputs.diff_base }}
+  # Pinned tool versions, in one place. Dependabot does not manage
+  # run:-step installs, so bumps are made deliberately via PRs
+  # (dependency-hygiene standard: never use `latest`).
+  QC_ESLINT_VERSION: '10.15.0'
+  QC_MARKDOWNLINT_VERSION: '0.24.1'
+  QC_PRETTIER_VERSION: '3.10.1'
+  QC_RUFF_VERSION: '0.17.6'
+  QC_YAMLLINT_VERSION: '1.38.0'
+  QC_HADOLINT_VERSION: 'v2.15.1'
+  QC_TAPLO_VERSION: '0.10.0'
+  QC_SHFMT_VERSION: '3.10.0'
+  QC_EC_VERSION: 'v3.7.0'
+  QC_TYPOS_VERSION: 'v1.47.0'
+  QC_GOLANGCI_LINT_VERSION: '2.1.6'
+  QC_STYLUA_VERSION: 'v2.4.1'
+  QC_SERVE_VERSION: '14.2.6'
 
 jobs:
-  eslint:
-    if: ${{ inputs.eslint_run == true }}
-    name: 'ESLint - JavaScript/TypeScript Linter'
+  detect:
+    name: 'Detect Changed Files'
     runs-on: ubuntu-latest
 
     steps:
@@ -169,306 +52,117 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: 'Classify changed files'
+        id: classify
+        run: |
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
+          # shellcheck source=.github/scripts/qc-resolve-base.sh
+          source .github/scripts/qc-resolve-base.sh
+          mapfile -t CHANGED < <(
+            git diff --name-only --diff-filter=ACMR "${BASE_REF}"...HEAD |
+              .github/scripts/qc-filter-changed-paths.sh || true
+          )
+          # shellcheck source=.github/scripts/qc-classify-changed.sh
+          source .github/scripts/qc-classify-changed.sh
+          # Fragments (<list>_count and heredoc <list>_files blocks) are
+          # never interpolated into this script; they flow through
+          # GITHUB_OUTPUT into job env (issue #37 C1/S1).
+          qc_classify_changed "${CHANGED[@]}" >> "$GITHUB_OUTPUT"
+
+    outputs:
+      eslint_count: ${{ steps.classify.outputs.eslint_count }}
+      eslint_files: ${{ steps.classify.outputs.eslint_files }}
+      prettier_count: ${{ steps.classify.outputs.prettier_count }}
+      prettier_files: ${{ steps.classify.outputs.prettier_files }}
+      markdownlint_count: ${{ steps.classify.outputs.markdownlint_count }}
+      markdownlint_files: ${{ steps.classify.outputs.markdownlint_files }}
+      yaml_count: ${{ steps.classify.outputs.yaml_count }}
+      yaml_files: ${{ steps.classify.outputs.yaml_files }}
+      shell_count: ${{ steps.classify.outputs.shell_count }}
+      shell_files: ${{ steps.classify.outputs.shell_files }}
+      ruff_count: ${{ steps.classify.outputs.ruff_count }}
+      ruff_files: ${{ steps.classify.outputs.ruff_files }}
+      toml_count: ${{ steps.classify.outputs.toml_count }}
+      toml_files: ${{ steps.classify.outputs.toml_files }}
+      docker_count: ${{ steps.classify.outputs.docker_count }}
+      docker_files: ${{ steps.classify.outputs.docker_files }}
+      go_count: ${{ steps.classify.outputs.go_count }}
+      go_files: ${{ steps.classify.outputs.go_files }}
+      stylua_count: ${{ steps.classify.outputs.stylua_count }}
+      stylua_files: ${{ steps.classify.outputs.stylua_files }}
+      jq_count: ${{ steps.classify.outputs.jq_count }}
+      jq_files: ${{ steps.classify.outputs.jq_files }}
+      prose_count: ${{ steps.classify.outputs.prose_count }}
+      prose_files: ${{ steps.classify.outputs.prose_files }}
+      editorconfig_count: ${{ steps.classify.outputs.editorconfig_count }}
+      editorconfig_files: ${{ steps.classify.outputs.editorconfig_files }}
+
+  eslint:
+    name: 'ESLint - JavaScript/TypeScript Linter'
+    needs: detect
+    if: needs.detect.outputs.eslint_count != '0'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 'Checkout Code'
+        # actions/checkout v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 1
+
       - name: 'Setup Node.js'
         # actions/setup-node v7.1.0
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
-          node-version: ${{ inputs.node_version }}
+          node-version: '24'
 
       - name: 'Install dependencies'
         run: |
           set -euo pipefail
-          if [[ -f package.json ]]; then
+          if [[ -f package.json ]] &&
+            [[ -f package-lock.json || -f yarn.lock || -f pnpm-lock.yaml ]]
+          then
             npm ci
+          elif [[ -f package.json ]]; then
+            npm install --no-save --ignore-scripts
           else
             echo 'No package.json found, skipping dependency installation'
           fi
 
       - name: 'Install ESLint'
-        env:
-          ESLINT_VERSION: 10.15.0
         run: |
           set -euo pipefail
-          npm install -g "eslint@${ESLINT_VERSION}"
-
-      - name: 'Get changed JavaScript/TypeScript files'
-        id: changed-files
-        run: |
-          set -euo pipefail
-          cd "$GITHUB_WORKSPACE"
-          git fetch origin main master 2>/dev/null || true
-          if [[ -n "${QC_DIFF_BASE}" ]]; then
-            BASE_REF="${QC_DIFF_BASE}"
-          elif git show-ref --verify --quiet refs/remotes/origin/main; then
-            BASE_REF="origin/main"
-          elif git show-ref --verify --quiet refs/remotes/origin/master; then
-            BASE_REF="origin/master"
-          else
-            BASE_REF="HEAD~1"
-          fi
-          mapfile -t CHANGED_FILES < <(
-            git diff --name-only --diff-filter=ACMR "${BASE_REF}"...HEAD |
-              grep -E '\.(js|jsx|ts|tsx)$' || true
-          )
-          if [[ ${#CHANGED_FILES[@]} -gt 0 ]] && \
-            [[ -n "${CHANGED_FILES[0]}" ]]; then
-            # shellcheck source=.github/scripts/qc-write-multiline-output.sh
-            source .github/scripts/qc-write-multiline-output.sh
-            qc_write_multiline_output files "${CHANGED_FILES[@]}"
-            echo 'any_changed=true' >> "$GITHUB_OUTPUT"
-          else
-            echo 'any_changed=false' >> "$GITHUB_OUTPUT"
-          fi
+          npm install -g "eslint@${QC_ESLINT_VERSION}"
 
       - name: 'Run ESLint'
         env:
-          QC_ANY_CHANGED: ${{ steps.changed-files.outputs.any_changed }}
-          QC_FILES: ${{ steps.changed-files.outputs.files }}
+          QC_FILES: ${{ needs.detect.outputs.eslint_files }}
         run: |
           set -euo pipefail
           cd "$GITHUB_WORKSPACE"
-          if [[ "${QC_ANY_CHANGED}" != "true" ]]; then
-            echo 'No JavaScript/TypeScript files to check'
-            exit 0
-          fi
-          readarray -t raw < <(
-            printf '%s\n' "${QC_FILES}"
-          )
           paths=()
-          for file in "${raw[@]}"; do
+          while IFS= read -r file; do
             [[ -z "${file}" ]] && continue
             [[ -f "${file}" ]] || continue
             paths+=( "${file}" )
-          done
+          done < <(printf '%s\n' "${QC_FILES}")
           if [[ ${#paths[@]} -eq 0 ]]; then
             echo 'No existing paths to lint'
             exit 0
           fi
-          npx eslint "${paths[@]}"
-
-  hadolint:
-    if: ${{ inputs.hadolint_run == true }}
-    name: 'Hadolint - Dockerfile Linter'
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: 'Checkout Code'
-        # actions/checkout v7.0.1
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-        with:
-          fetch-depth: 0
-
-      - name: 'Install Hadolint'
-        env:
-          HADOLINT_VERSION: v2.15.1
-        run: |
-          set -euo pipefail
-          HADOLINT_URL="https://github.com/hadolint/hadolint/releases/download/${HADOLINT_VERSION}/hadolint-Linux-x86_64"
-          curl -fsSL "${HADOLINT_URL}" -o hadolint
-          chmod +x hadolint
-          sudo mv hadolint /usr/local/bin/
-
-      - name: 'Get changed Dockerfile files'
-        id: changed-files
-        run: |
-          set -euo pipefail
-          cd "$GITHUB_WORKSPACE"
-          git fetch origin main master 2>/dev/null || true
-          if [[ -n "${QC_DIFF_BASE}" ]]; then
-            BASE_REF="${QC_DIFF_BASE}"
-          elif git show-ref --verify --quiet refs/remotes/origin/main; then
-            BASE_REF="origin/main"
-          elif git show-ref --verify --quiet refs/remotes/origin/master; then
-            BASE_REF="origin/master"
+          if npx --no-install eslint --version >/dev/null 2>&1; then
+            echo 'Using repo-local ESLint'
+            npx --no-install eslint "${paths[@]}"
           else
-            BASE_REF="HEAD~1"
+            echo 'Using pinned global ESLint'
+            eslint "${paths[@]}"
           fi
-          mapfile -t CHANGED_FILES < <(
-            git diff --name-only --diff-filter=ACMR "${BASE_REF}"...HEAD |
-              grep -iE '(Dockerfile|\.dockerfile)' || true
-          )
-          if [[ ${#CHANGED_FILES[@]} -gt 0 ]] && \
-            [[ -n "${CHANGED_FILES[0]}" ]]; then
-            # shellcheck source=.github/scripts/qc-write-multiline-output.sh
-            source .github/scripts/qc-write-multiline-output.sh
-            qc_write_multiline_output files "${CHANGED_FILES[@]}"
-            echo 'any_changed=true' >> "$GITHUB_OUTPUT"
-          else
-            echo 'any_changed=false' >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: 'Run Hadolint'
-        env:
-          QC_ANY_CHANGED: ${{ steps.changed-files.outputs.any_changed }}
-          QC_FILES: ${{ steps.changed-files.outputs.files }}
-        run: |
-          set -euo pipefail
-          cd "$GITHUB_WORKSPACE"
-          if [[ "${QC_ANY_CHANGED}" != "true" ]]; then
-            echo 'No Dockerfile files to check'
-            exit 0
-          fi
-          readarray -t raw < <(
-            printf '%s\n' "${QC_FILES}"
-          )
-          paths=()
-          for file in "${raw[@]}"; do
-            [[ -z "${file}" ]] && continue
-            [[ -f "${file}" ]] || continue
-            paths+=( "${file}" )
-          done
-          if [[ ${#paths[@]} -eq 0 ]]; then
-            echo 'No existing paths to lint'
-            exit 0
-          fi
-          hadolint "${paths[@]}"
-
-  jq:
-    if: ${{ inputs.jq_run == true }}
-    name: 'jq - JSON Validator'
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: 'Checkout Code'
-        # actions/checkout v7.0.1
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-        with:
-          fetch-depth: 0
-
-      - name: 'Get changed JSON files'
-        id: changed-files
-        run: |
-          set -euo pipefail
-          cd "$GITHUB_WORKSPACE"
-          git fetch origin main master 2>/dev/null || true
-          if [[ -n "${QC_DIFF_BASE}" ]]; then
-            BASE_REF="${QC_DIFF_BASE}"
-          elif git show-ref --verify --quiet refs/remotes/origin/main; then
-            BASE_REF="origin/main"
-          elif git show-ref --verify --quiet refs/remotes/origin/master; then
-            BASE_REF="origin/master"
-          else
-            BASE_REF="HEAD~1"
-          fi
-          mapfile -t CHANGED_FILES < <(
-            git diff --name-only --diff-filter=ACMR "${BASE_REF}"...HEAD |
-              grep -E '\.json$' || true
-          )
-          if [[ ${#CHANGED_FILES[@]} -gt 0 ]] && \
-            [[ -n "${CHANGED_FILES[0]}" ]]; then
-            # shellcheck source=.github/scripts/qc-write-multiline-output.sh
-            source .github/scripts/qc-write-multiline-output.sh
-            qc_write_multiline_output files "${CHANGED_FILES[@]}"
-            echo 'any_changed=true' >> "$GITHUB_OUTPUT"
-          else
-            echo 'any_changed=false' >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: 'Run jq'
-        env:
-          QC_ANY_CHANGED: ${{ steps.changed-files.outputs.any_changed }}
-          QC_FILES: ${{ steps.changed-files.outputs.files }}
-        run: |
-          set -euo pipefail
-          cd "$GITHUB_WORKSPACE"
-          if [[ "${QC_ANY_CHANGED}" != "true" ]]; then
-            echo 'No JSON files to check'
-            exit 0
-          fi
-          readarray -t raw < <(
-            printf '%s\n' "${QC_FILES}"
-          )
-          for file in "${raw[@]}"; do
-            [[ -z "${file}" ]] && continue
-            [[ -f "${file}" ]] || continue
-            # jq empty accepts a root of false or null; jq -e . does not.
-            jq empty "${file}" >/dev/null
-          done
-
-  markdownlint:
-    if: ${{ inputs.markdownlint_run == true }}
-    name: 'Markdownlint - Markdown Linter'
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: 'Checkout Code'
-        # actions/checkout v7.0.1
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-        with:
-          fetch-depth: 0
-
-      - name: 'Setup Node.js'
-        # actions/setup-node v7.1.0
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
-        with:
-          node-version: ${{ inputs.node_version }}
-
-      - name: 'Install markdownlint-cli2'
-        env:
-          MARKDOWNLINT_VERSION: 0.24.2
-        run: |
-          set -euo pipefail
-          npm install -g "markdownlint-cli2@${MARKDOWNLINT_VERSION}"
-
-      - name: 'Get changed Markdown files'
-        id: changed-files
-        run: |
-          set -euo pipefail
-          cd "$GITHUB_WORKSPACE"
-          git fetch origin main master 2>/dev/null || true
-          if [[ -n "${QC_DIFF_BASE}" ]]; then
-            BASE_REF="${QC_DIFF_BASE}"
-          elif git show-ref --verify --quiet refs/remotes/origin/main; then
-            BASE_REF="origin/main"
-          elif git show-ref --verify --quiet refs/remotes/origin/master; then
-            BASE_REF="origin/master"
-          else
-            BASE_REF="HEAD~1"
-          fi
-          mapfile -t CHANGED_FILES < <(
-            git diff --name-only --diff-filter=ACMR "${BASE_REF}"...HEAD |
-              grep -E '\.(md|markdown)$' |
-              .github/scripts/qc-filter-changed-paths.sh || true
-          )
-          if [[ ${#CHANGED_FILES[@]} -gt 0 ]] && \
-            [[ -n "${CHANGED_FILES[0]}" ]]; then
-            # shellcheck source=.github/scripts/qc-write-multiline-output.sh
-            source .github/scripts/qc-write-multiline-output.sh
-            qc_write_multiline_output files "${CHANGED_FILES[@]}"
-            echo 'any_changed=true' >> "$GITHUB_OUTPUT"
-          else
-            echo 'any_changed=false' >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: 'Run markdownlint-cli2'
-        env:
-          QC_ANY_CHANGED: ${{ steps.changed-files.outputs.any_changed }}
-          QC_FILES: ${{ steps.changed-files.outputs.files }}
-        run: |
-          set -euo pipefail
-          cd "$GITHUB_WORKSPACE"
-          if [[ "${QC_ANY_CHANGED}" != "true" ]]; then
-            echo 'No Markdown files to check'
-            exit 0
-          fi
-          readarray -t raw < <(
-            printf '%s\n' "${QC_FILES}"
-          )
-          paths=()
-          for file in "${raw[@]}"; do
-            [[ -z "${file}" ]] && continue
-            [[ -f "${file}" ]] || continue
-            paths+=( "${file}" )
-          done
-          if [[ ${#paths[@]} -eq 0 ]]; then
-            echo 'No existing paths to lint'
-            exit 0
-          fi
-          markdownlint-cli2 "${paths[@]}"
 
   prettier:
-    if: ${{ inputs.prettier_run == true }}
     name: 'Prettier - Code Formatter'
+    needs: detect
+    if: needs.detect.outputs.prettier_count != '0'
     runs-on: ubuntu-latest
 
     steps:
@@ -476,72 +170,44 @@ jobs:
         # actions/checkout v7.0.1
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          fetch-depth: 0
+          fetch-depth: 1
 
       - name: 'Setup Node.js'
         # actions/setup-node v7.1.0
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
-          node-version: ${{ inputs.node_version }}
+          node-version: '24'
+
+      - name: 'Install dependencies'
+        run: |
+          set -euo pipefail
+          if [[ -f package.json ]] &&
+            [[ -f package-lock.json || -f yarn.lock || -f pnpm-lock.yaml ]]
+          then
+            npm ci
+          elif [[ -f package.json ]]; then
+            npm install --no-save --ignore-scripts
+          else
+            echo 'No package.json found, skipping dependency installation'
+          fi
 
       - name: 'Install Prettier'
-        env:
-          PRETTIER_VERSION: 3.10.1
         run: |
           set -euo pipefail
-          npm install -g "prettier@${PRETTIER_VERSION}"
-
-      - name: 'Get changed files'
-        id: changed-files
-        run: |
-          set -euo pipefail
-          cd "$GITHUB_WORKSPACE"
-          git fetch origin main master 2>/dev/null || true
-          if [[ -n "${QC_DIFF_BASE}" ]]; then
-            BASE_REF="${QC_DIFF_BASE}"
-          elif git show-ref --verify --quiet refs/remotes/origin/main; then
-            BASE_REF="origin/main"
-          elif git show-ref --verify --quiet refs/remotes/origin/master; then
-            BASE_REF="origin/master"
-          else
-            BASE_REF="HEAD~1"
-          fi
-          mapfile -t CHANGED_FILES < <(
-            git diff --name-only --diff-filter=ACMR "${BASE_REF}"...HEAD |
-              grep -E \
-                '\.(js|jsx|ts|tsx|json|css|scss|md|markdown)$' |
-              .github/scripts/qc-filter-changed-paths.sh || true
-          )
-          if [[ ${#CHANGED_FILES[@]} -gt 0 ]] && \
-            [[ -n "${CHANGED_FILES[0]}" ]]; then
-            # shellcheck source=.github/scripts/qc-write-multiline-output.sh
-            source .github/scripts/qc-write-multiline-output.sh
-            qc_write_multiline_output files "${CHANGED_FILES[@]}"
-            echo 'any_changed=true' >> "$GITHUB_OUTPUT"
-          else
-            echo 'any_changed=false' >> "$GITHUB_OUTPUT"
-          fi
+          npm install -g "prettier@${QC_PRETTIER_VERSION}"
 
       - name: 'Run Prettier'
         env:
-          QC_ANY_CHANGED: ${{ steps.changed-files.outputs.any_changed }}
-          QC_FILES: ${{ steps.changed-files.outputs.files }}
+          QC_FILES: ${{ needs.detect.outputs.prettier_files }}
         run: |
           set -euo pipefail
           cd "$GITHUB_WORKSPACE"
-          if [[ "${QC_ANY_CHANGED}" != "true" ]]; then
-            echo 'No files to check with Prettier'
-            exit 0
-          fi
-          readarray -t raw < <(
-            printf '%s\n' "${QC_FILES}"
-          )
           paths=()
-          for file in "${raw[@]}"; do
+          while IFS= read -r file; do
             [[ -z "${file}" ]] && continue
             [[ -f "${file}" ]] || continue
             paths+=( "${file}" )
-          done
+          done < <(printf '%s\n' "${QC_FILES}")
           if [[ ${#paths[@]} -eq 0 ]]; then
             echo 'No existing paths to check with Prettier'
             exit 0
@@ -549,11 +215,19 @@ jobs:
           # Default ignore resolution: Prettier loads .prettierignore and
           # .gitignore from the file path upward (do not pass --ignore-path,
           # which replaces that default list and is easy to misconfigure).
-          prettier --no-error-on-unmatched-pattern --check "${paths[@]}"
+          if npx --no-install prettier --version >/dev/null 2>&1; then
+            echo 'Using repo-local Prettier'
+            npx --no-install prettier --no-error-on-unmatched-pattern \
+              --check "${paths[@]}"
+          else
+            echo 'Using pinned global Prettier'
+            prettier --no-error-on-unmatched-pattern --check "${paths[@]}"
+          fi
 
-  ruff:
-    if: ${{ inputs.ruff_run == true }}
-    name: 'Ruff - Python Linter'
+  markdownlint:
+    name: 'Markdownlint - Markdown Linter'
+    needs: detect
+    if: needs.detect.outputs.markdownlint_count != '0'
     runs-on: ubuntu-latest
 
     steps:
@@ -561,238 +235,60 @@ jobs:
         # actions/checkout v7.0.1
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          fetch-depth: 0
+          fetch-depth: 1
 
-      - name: 'Install Ruff'
-        env:
-          RUFF_VERSION: 0.17.6
+      - name: 'Setup Node.js'
+        # actions/setup-node v7.1.0
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: '24'
+
+      - name: 'Install dependencies'
         run: |
           set -euo pipefail
-          pip3 install "ruff==${RUFF_VERSION}"
+          if [[ -f package.json ]] &&
+            [[ -f package-lock.json || -f yarn.lock || -f pnpm-lock.yaml ]]
+          then
+            npm ci
+          elif [[ -f package.json ]]; then
+            npm install --no-save --ignore-scripts
+          else
+            echo 'No package.json found, skipping dependency installation'
+          fi
 
-      - name: 'Get changed Python files'
-        id: changed-files
+      - name: 'Install markdownlint-cli2'
+        run: |
+          set -euo pipefail
+          npm install -g "markdownlint-cli2@${QC_MARKDOWNLINT_VERSION}"
+
+      - name: 'Run markdownlint-cli2'
+        env:
+          QC_FILES: ${{ needs.detect.outputs.markdownlint_files }}
         run: |
           set -euo pipefail
           cd "$GITHUB_WORKSPACE"
-          git fetch origin main master 2>/dev/null || true
-          if [[ -n "${QC_DIFF_BASE}" ]]; then
-            BASE_REF="${QC_DIFF_BASE}"
-          elif git show-ref --verify --quiet refs/remotes/origin/main; then
-            BASE_REF="origin/main"
-          elif git show-ref --verify --quiet refs/remotes/origin/master; then
-            BASE_REF="origin/master"
-          else
-            BASE_REF="HEAD~1"
-          fi
-          mapfile -t CHANGED_FILES < <(
-            git diff --name-only --diff-filter=ACMR "${BASE_REF}"...HEAD |
-              grep -E '\.(py|pyw)$' || true
-          )
-          if [[ ${#CHANGED_FILES[@]} -gt 0 ]] && \
-            [[ -n "${CHANGED_FILES[0]}" ]]; then
-            # shellcheck source=.github/scripts/qc-write-multiline-output.sh
-            source .github/scripts/qc-write-multiline-output.sh
-            qc_write_multiline_output files "${CHANGED_FILES[@]}"
-            echo 'any_changed=true' >> "$GITHUB_OUTPUT"
-          else
-            echo 'any_changed=false' >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: 'Run Ruff'
-        env:
-          QC_ANY_CHANGED: ${{ steps.changed-files.outputs.any_changed }}
-          QC_FILES: ${{ steps.changed-files.outputs.files }}
-        run: |
-          set -euo pipefail
-          cd "$GITHUB_WORKSPACE"
-          if [[ "${QC_ANY_CHANGED}" != "true" ]]; then
-            echo 'No Python files to check'
-            exit 0
-          fi
-          readarray -t raw < <(
-            printf '%s\n' "${QC_FILES}"
-          )
           paths=()
-          for file in "${raw[@]}"; do
+          while IFS= read -r file; do
             [[ -z "${file}" ]] && continue
             [[ -f "${file}" ]] || continue
             paths+=( "${file}" )
-          done
+          done < <(printf '%s\n' "${QC_FILES}")
           if [[ ${#paths[@]} -eq 0 ]]; then
             echo 'No existing paths to lint'
             exit 0
           fi
-          ruff check "${paths[@]}"
-
-  shellcheck:
-    if: ${{ inputs.shellcheck_run == true }}
-    name: 'ShellCheck - Shell Script Linter'
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: 'Checkout Code'
-        # actions/checkout v7.0.1
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-        with:
-          fetch-depth: 0
-
-      - name: 'Get changed shell files'
-        id: changed-files
-        run: |
-          set -euo pipefail
-          cd "$GITHUB_WORKSPACE"
-          git fetch origin main master 2>/dev/null || true
-          if [[ -n "${QC_DIFF_BASE}" ]]; then
-            BASE_REF="${QC_DIFF_BASE}"
-          elif git show-ref --verify --quiet refs/remotes/origin/main; then
-            BASE_REF="origin/main"
-          elif git show-ref --verify --quiet refs/remotes/origin/master; then
-            BASE_REF="origin/master"
+          if npx --no-install markdownlint-cli2 --version >/dev/null 2>&1; then
+            echo 'Using repo-local markdownlint-cli2'
+            npx --no-install markdownlint-cli2 "${paths[@]}"
           else
-            BASE_REF="HEAD~1"
+            echo 'Using pinned global markdownlint-cli2'
+            markdownlint-cli2 "${paths[@]}"
           fi
-          mapfile -t CHANGED_FILES < <(
-            git diff --name-only --diff-filter=ACMR "${BASE_REF}"...HEAD |
-              grep -E '\.(sh|bash|zsh)$' || true
-          )
-          if [[ ${#CHANGED_FILES[@]} -gt 0 ]] && \
-            [[ -n "${CHANGED_FILES[0]}" ]]; then
-            # shellcheck source=.github/scripts/qc-write-multiline-output.sh
-            source .github/scripts/qc-write-multiline-output.sh
-            qc_write_multiline_output files "${CHANGED_FILES[@]}"
-            echo 'any_changed=true' >> "$GITHUB_OUTPUT"
-          else
-            echo 'any_changed=false' >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: 'Run ShellCheck'
-        env:
-          QC_ANY_CHANGED: ${{ steps.changed-files.outputs.any_changed }}
-          QC_FILES: ${{ steps.changed-files.outputs.files }}
-        run: |
-          set -euo pipefail
-          cd "$GITHUB_WORKSPACE"
-          if [[ "${QC_ANY_CHANGED}" != "true" ]]; then
-            echo 'No shell files to check'
-            exit 0
-          fi
-          readarray -t raw < <(
-            printf '%s\n' "${QC_FILES}"
-          )
-          paths=()
-          for file in "${raw[@]}"; do
-            [[ -z "${file}" ]] && continue
-            [[ -f "${file}" ]] || continue
-            paths+=( "${file}" )
-          done
-          if [[ ${#paths[@]} -eq 0 ]]; then
-            echo 'No existing paths to lint'
-            exit 0
-          fi
-          shellcheck -x "${paths[@]}"
-
-  stylua:
-    if: ${{ inputs.stylua_run == true }}
-    name: 'StyLua - Lua Formatter'
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: 'Checkout Code'
-        # actions/checkout v7.0.1
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-
-      - name: 'Run StyLua'
-        # yamllint disable rule:line-length
-        # JohnnyMorganz/stylua-action v5.0.0
-        uses: JohnnyMorganz/stylua-action@76fd70c03e6340ceaf673366712db9b20560b402
-        # yamllint enable rule:line-length
-        with:
-          token: ${{ secrets.token || github.token }}
-          version: ${{ inputs.stylua_version }}
-          args: ${{ inputs.stylua_args }}
-
-  taplo:
-    if: ${{ inputs.taplo_run == true }}
-    name: 'Taplo - TOML Linter'
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: 'Checkout Code'
-        # actions/checkout v7.0.1
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-        with:
-          fetch-depth: 0
-
-      - name: 'Install Taplo'
-        env:
-          TAPLO_VERSION: 0.10.0
-        run: |
-          set -euo pipefail
-          TAPLO_URL="https://github.com/tamasfe/taplo/releases/download/${TAPLO_VERSION}/taplo-linux-x86_64.gz"
-          curl -fsSL "${TAPLO_URL}" -o taplo.gz
-          gunzip -f taplo.gz
-          chmod +x taplo
-          sudo mv taplo /usr/local/bin/
-
-      - name: 'Get changed TOML files'
-        id: changed-files
-        run: |
-          set -euo pipefail
-          cd "$GITHUB_WORKSPACE"
-          git fetch origin main master 2>/dev/null || true
-          if [[ -n "${QC_DIFF_BASE}" ]]; then
-            BASE_REF="${QC_DIFF_BASE}"
-          elif git show-ref --verify --quiet refs/remotes/origin/main; then
-            BASE_REF="origin/main"
-          elif git show-ref --verify --quiet refs/remotes/origin/master; then
-            BASE_REF="origin/master"
-          else
-            BASE_REF="HEAD~1"
-          fi
-          mapfile -t CHANGED_FILES < <(
-            git diff --name-only --diff-filter=ACMR "${BASE_REF}"...HEAD |
-              grep -E '\.toml$' || true
-          )
-          if [[ ${#CHANGED_FILES[@]} -gt 0 ]] && \
-            [[ -n "${CHANGED_FILES[0]}" ]]; then
-            # shellcheck source=.github/scripts/qc-write-multiline-output.sh
-            source .github/scripts/qc-write-multiline-output.sh
-            qc_write_multiline_output files "${CHANGED_FILES[@]}"
-            echo 'any_changed=true' >> "$GITHUB_OUTPUT"
-          else
-            echo 'any_changed=false' >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: 'Run Taplo'
-        env:
-          QC_ANY_CHANGED: ${{ steps.changed-files.outputs.any_changed }}
-          QC_FILES: ${{ steps.changed-files.outputs.files }}
-        run: |
-          set -euo pipefail
-          cd "$GITHUB_WORKSPACE"
-          if [[ "${QC_ANY_CHANGED}" != "true" ]]; then
-            echo 'No TOML files to check'
-            exit 0
-          fi
-          readarray -t raw < <(
-            printf '%s\n' "${QC_FILES}"
-          )
-          paths=()
-          for file in "${raw[@]}"; do
-            [[ -z "${file}" ]] && continue
-            [[ -f "${file}" ]] || continue
-            paths+=( "${file}" )
-          done
-          if [[ ${#paths[@]} -eq 0 ]]; then
-            echo 'No existing paths to lint'
-            exit 0
-          fi
-          taplo lint "${paths[@]}"
 
   yamllint:
-    if: ${{ inputs.yamllint_run == true }}
     name: 'Yamllint - YAML Linter'
+    needs: detect
+    if: needs.detect.outputs.yaml_count != '0'
     runs-on: ubuntu-latest
 
     steps:
@@ -800,90 +296,307 @@ jobs:
         # actions/checkout v7.0.1
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          fetch-depth: 0
+          fetch-depth: 1
 
       - name: 'Install yamllint'
-        env:
-          YAMLLINT_VERSION: 1.38.0
         run: |
           set -euo pipefail
-          pip3 install "yamllint==${YAMLLINT_VERSION}"
-
-      - name: 'Get changed YAML files'
-        id: changed-files
-        run: |
-          set -euo pipefail
-          cd "$GITHUB_WORKSPACE"
-          git fetch origin main master 2>/dev/null || true
-          if [[ -n "${QC_DIFF_BASE}" ]]; then
-            BASE_REF="${QC_DIFF_BASE}"
-          elif git show-ref --verify --quiet refs/remotes/origin/main; then
-            BASE_REF="origin/main"
-          elif git show-ref --verify --quiet refs/remotes/origin/master; then
-            BASE_REF="origin/master"
-          else
-            BASE_REF="HEAD~1"
-          fi
-          mapfile -t CHANGED_FILES < <(
-            git diff --name-only --diff-filter=ACMR "${BASE_REF}"...HEAD |
-              grep -E '\.(yml|yaml)$' || true
-          )
-          if [[ ${#CHANGED_FILES[@]} -gt 0 ]] && \
-            [[ -n "${CHANGED_FILES[0]}" ]]; then
-            # shellcheck source=.github/scripts/qc-write-multiline-output.sh
-            source .github/scripts/qc-write-multiline-output.sh
-            qc_write_multiline_output files "${CHANGED_FILES[@]}"
-            echo 'any_changed=true' >> "$GITHUB_OUTPUT"
-          else
-            echo 'any_changed=false' >> "$GITHUB_OUTPUT"
-          fi
+          pip3 install "yamllint==${QC_YAMLLINT_VERSION}"
 
       - name: 'Run yamllint'
         env:
-          QC_ANY_CHANGED: ${{ steps.changed-files.outputs.any_changed }}
-          QC_FILES: ${{ steps.changed-files.outputs.files }}
+          QC_FILES: ${{ needs.detect.outputs.yaml_files }}
         run: |
           set -euo pipefail
           cd "$GITHUB_WORKSPACE"
-          if [[ "${QC_ANY_CHANGED}" != "true" ]]; then
-            echo 'No YAML files to check'
-            exit 0
-          fi
-          readarray -t raw < <(
-            printf '%s\n' "${QC_FILES}"
-          )
           paths=()
-          for file in "${raw[@]}"; do
+          while IFS= read -r file; do
             [[ -z "${file}" ]] && continue
             [[ -f "${file}" ]] || continue
             paths+=( "${file}" )
-          done
+          done < <(printf '%s\n' "${QC_FILES}")
           if [[ ${#paths[@]} -eq 0 ]]; then
             echo 'No existing paths to lint'
             exit 0
           fi
           yamllint "${paths[@]}"
 
-  typos:
-    if: ${{ inputs.typos_run == true }}
-    name: 'typos - Spell Checker'
+  shellcheck:
+    name: 'ShellCheck - Shell Script Linter'
+    needs: detect
+    if: needs.detect.outputs.shell_count != '0'
     runs-on: ubuntu-latest
-    env:
-      QC_TYPOS_CONFIG: ${{ inputs.typos_config }}
 
     steps:
       - name: 'Checkout Code'
         # actions/checkout v7.0.1
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          fetch-depth: 0
+          fetch-depth: 1
 
-      - name: 'Install typos'
+      - name: 'Run ShellCheck'
         env:
-          TYPOS_VERSION: v1.47.0
+          QC_FILES: ${{ needs.detect.outputs.shell_files }}
         run: |
           set -euo pipefail
-          url="https://github.com/crate-ci/typos/releases/download/${TYPOS_VERSION}/typos-${TYPOS_VERSION}-x86_64-unknown-linux-musl.tar.gz"
+          cd "$GITHUB_WORKSPACE"
+          paths=()
+          while IFS= read -r file; do
+            [[ -z "${file}" ]] && continue
+            [[ -f "${file}" ]] || continue
+            paths+=( "${file}" )
+          done < <(printf '%s\n' "${QC_FILES}")
+          if [[ ${#paths[@]} -eq 0 ]]; then
+            echo 'No existing paths to lint'
+            exit 0
+          fi
+          shellcheck -x "${paths[@]}"
+
+  shfmt:
+    name: 'shfmt - Shell Formatter'
+    needs: detect
+    if: needs.detect.outputs.shell_count != '0'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 'Checkout Code'
+        # actions/checkout v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 1
+
+      - name: 'Install shfmt'
+        run: |
+          set -euo pipefail
+          base_url="https://github.com/mvdan/sh/releases/download"
+          file="shfmt_v${QC_SHFMT_VERSION}_linux_amd64"
+          url="${base_url}/v${QC_SHFMT_VERSION}/${file}"
+          curl -fsSL "$url" -o shfmt
+          chmod +x shfmt
+          sudo mv shfmt /usr/local/bin/
+
+      - name: 'Run shfmt'
+        env:
+          QC_FILES: ${{ needs.detect.outputs.shell_files }}
+        run: |
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
+          paths=()
+          while IFS= read -r file; do
+            [[ -z "${file}" ]] && continue
+            [[ -f "${file}" ]] || continue
+            paths+=( "${file}" )
+          done < <(printf '%s\n' "${QC_FILES}")
+          if [[ ${#paths[@]} -eq 0 ]]; then
+            echo 'No existing paths to check'
+            exit 0
+          fi
+          shfmt -d "${paths[@]}"
+
+  ruff:
+    name: 'Ruff - Python Linter'
+    needs: detect
+    if: needs.detect.outputs.ruff_count != '0'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 'Checkout Code'
+        # actions/checkout v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 1
+
+      - name: 'Install Ruff'
+        run: |
+          set -euo pipefail
+          pip3 install "ruff==${QC_RUFF_VERSION}"
+
+      - name: 'Run Ruff'
+        env:
+          QC_FILES: ${{ needs.detect.outputs.ruff_files }}
+        run: |
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
+          paths=()
+          while IFS= read -r file; do
+            [[ -z "${file}" ]] && continue
+            [[ -f "${file}" ]] || continue
+            paths+=( "${file}" )
+          done < <(printf '%s\n' "${QC_FILES}")
+          if [[ ${#paths[@]} -eq 0 ]]; then
+            echo 'No existing paths to lint'
+            exit 0
+          fi
+          ruff check "${paths[@]}"
+
+  taplo:
+    name: 'Taplo - TOML Linter'
+    needs: detect
+    if: needs.detect.outputs.toml_count != '0'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 'Checkout Code'
+        # actions/checkout v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 1
+
+      - name: 'Install Taplo'
+        run: |
+          set -euo pipefail
+          base_url="https://github.com/tamasfe/taplo/releases/download"
+          url="${base_url}/${QC_TAPLO_VERSION}/taplo-linux-x86_64.gz"
+          curl -fsSL "${url}" -o taplo.gz
+          gunzip -f taplo.gz
+          chmod +x taplo
+          sudo mv taplo /usr/local/bin/
+
+      - name: 'Run Taplo'
+        env:
+          QC_FILES: ${{ needs.detect.outputs.toml_files }}
+        run: |
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
+          paths=()
+          while IFS= read -r file; do
+            [[ -z "${file}" ]] && continue
+            [[ -f "${file}" ]] || continue
+            paths+=( "${file}" )
+          done < <(printf '%s\n' "${QC_FILES}")
+          if [[ ${#paths[@]} -eq 0 ]]; then
+            echo 'No existing paths to lint'
+            exit 0
+          fi
+          taplo lint "${paths[@]}"
+
+  hadolint:
+    name: 'Hadolint - Dockerfile Linter'
+    needs: detect
+    if: needs.detect.outputs.docker_count != '0'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 'Checkout Code'
+        # actions/checkout v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 1
+
+      - name: 'Install Hadolint'
+        run: |
+          set -euo pipefail
+          base_url="https://github.com/hadolint/hadolint/releases/download"
+          url="${base_url}/${QC_HADOLINT_VERSION}/hadolint-Linux-x86_64"
+          curl -fsSL "${url}" -o hadolint
+          chmod +x hadolint
+          sudo mv hadolint /usr/local/bin/
+
+      - name: 'Run Hadolint'
+        env:
+          QC_FILES: ${{ needs.detect.outputs.docker_files }}
+        run: |
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
+          paths=()
+          while IFS= read -r file; do
+            [[ -z "${file}" ]] && continue
+            [[ -f "${file}" ]] || continue
+            paths+=( "${file}" )
+          done < <(printf '%s\n' "${QC_FILES}")
+          if [[ ${#paths[@]} -eq 0 ]]; then
+            echo 'No existing paths to lint'
+            exit 0
+          fi
+          hadolint "${paths[@]}"
+
+  jq:
+    name: 'jq - JSON Validator'
+    needs: detect
+    if: needs.detect.outputs.jq_count != '0'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 'Checkout Code'
+        # actions/checkout v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 1
+
+      - name: 'Run jq'
+        env:
+          QC_FILES: ${{ needs.detect.outputs.jq_files }}
+        run: |
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
+          while IFS= read -r file; do
+            [[ -z "${file}" ]] && continue
+            [[ -f "${file}" ]] || continue
+            # jq empty accepts a root of false or null; jq -e . does not.
+            jq empty "${file}" >/dev/null
+          done < <(printf '%s\n' "${QC_FILES}")
+
+  stylua:
+    name: 'StyLua - Lua Formatter'
+    needs: detect
+    if: needs.detect.outputs.stylua_count != '0'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 'Checkout Code'
+        # actions/checkout v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 1
+
+      - name: 'Install StyLua'
+        run: |
+          set -euo pipefail
+          base_url="https://github.com/JohnnyMorganz/StyLua/releases/download"
+          url="${base_url}/${QC_STYLUA_VERSION}/stylua-linux-x86_64.zip"
+          tmpdir="$(mktemp -d)"
+          curl -fsSL "$url" -o "${tmpdir}/stylua.zip"
+          unzip -q "${tmpdir}/stylua.zip" -d "${tmpdir}"
+          sudo install -m 0755 "${tmpdir}/stylua" /usr/local/bin/stylua
+          rm -rf "${tmpdir}"
+
+      - name: 'Run StyLua'
+        env:
+          QC_FILES: ${{ needs.detect.outputs.stylua_files }}
+        run: |
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
+          paths=()
+          while IFS= read -r file; do
+            [[ -z "${file}" ]] && continue
+            [[ -f "${file}" ]] || continue
+            paths+=( "${file}" )
+          done < <(printf '%s\n' "${QC_FILES}")
+          if [[ ${#paths[@]} -eq 0 ]]; then
+            echo 'No existing paths to check'
+            exit 0
+          fi
+          stylua --check "${paths[@]}"
+
+  typos:
+    name: 'typos - Spell Checker'
+    needs: detect
+    if: needs.detect.outputs.prose_count != '0'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 'Checkout Code'
+        # actions/checkout v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 1
+
+      - name: 'Install typos'
+        run: |
+          set -euo pipefail
+          base_url="https://github.com/crate-ci/typos/releases/download"
+          archive="typos-${QC_TYPOS_VERSION}-x86_64-unknown-linux-musl.tar.gz"
+          url="${base_url}/${QC_TYPOS_VERSION}/${archive}"
           tmpdir="$(mktemp -d)"
           curl -fsSL "$url" -o "${tmpdir}/typos.tar.gz"
           # Archive members are ./typos (GNU tar rejects bare "typos").
@@ -891,49 +604,18 @@ jobs:
           sudo install -m 0755 "${tmpdir}/typos" /usr/local/bin/typos
           rm -rf "${tmpdir}"
 
-      - name: 'Get changed prose files'
-        id: changed-files
-        run: |
-          set -euo pipefail
-          # shellcheck source=.github/scripts/qc-resolve-base.sh
-          source .github/scripts/qc-resolve-base.sh
-          # Prose only (md, txt, rst, html, LICENSE) — not code or YAML.
-          typos_pat='\.(md|markdown|txt|text|rst|adoc|asciidoc|html)$'
-          license_pat='(^|/)(LICENSE|COPYING|NOTICE)(\.[^/]+)?$'
-          mapfile -t CHANGED_FILES < <(
-            git diff --name-only --diff-filter=ACMR "${BASE_REF}"...HEAD |
-              grep -Ei "(${typos_pat}|${license_pat})" || true
-          )
-          if [[ ${#CHANGED_FILES[@]} -gt 0 ]] && \
-            [[ -n "${CHANGED_FILES[0]}" ]]; then
-            # shellcheck source=.github/scripts/qc-write-multiline-output.sh
-            source .github/scripts/qc-write-multiline-output.sh
-            qc_write_multiline_output files "${CHANGED_FILES[@]}"
-            echo 'any_changed=true' >> "$GITHUB_OUTPUT"
-          else
-            echo 'any_changed=false' >> "$GITHUB_OUTPUT"
-          fi
-
       - name: 'Run typos'
         env:
-          QC_ANY_CHANGED: ${{ steps.changed-files.outputs.any_changed }}
-          QC_FILES: ${{ steps.changed-files.outputs.files }}
+          QC_FILES: ${{ needs.detect.outputs.prose_files }}
         run: |
           set -euo pipefail
           cd "$GITHUB_WORKSPACE"
-          if [[ "${QC_ANY_CHANGED}" != "true" ]]; then
-            echo 'No changed files to spell-check'
-            exit 0
-          fi
-          readarray -t raw < <(
-            printf '%s\n' "${QC_FILES}"
-          )
           paths=()
-          for file in "${raw[@]}"; do
+          while IFS= read -r file; do
             [[ -z "${file}" ]] && continue
             [[ -f "${file}" ]] || continue
             paths+=( "${file}" )
-          done
+          done < <(printf '%s\n' "${QC_FILES}")
           if [[ ${#paths[@]} -eq 0 ]]; then
             echo 'No existing paths to check'
             exit 0
@@ -948,8 +630,9 @@ jobs:
           typos "${TYPOS_CLI_ARGS[@]}" "${paths[@]}"
 
   editorconfig:
-    if: ${{ inputs.editorconfig_run == true }}
     name: 'EditorConfig - Style Consistency'
+    needs: detect
+    if: needs.detect.outputs.editorconfig_count != '0'
     runs-on: ubuntu-latest
 
     steps:
@@ -957,133 +640,41 @@ jobs:
         # actions/checkout v7.0.1
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          fetch-depth: 0
+          fetch-depth: 1
 
       - name: 'Install editorconfig-checker'
-        env:
-          EC_VERSION: v3.7.0
         run: |
           set -euo pipefail
-          url="https://github.com/editorconfig-checker/editorconfig-checker/releases/download/${EC_VERSION}/ec-linux-amd64.tar.gz"
+          org="editorconfig-checker"
+          base_url="https://github.com/${org}/${org}/releases/download"
+          url="${base_url}/${QC_EC_VERSION}/ec-linux-amd64.tar.gz"
           curl -fsSL "$url" -o ec.tar.gz
           tar -xzf ec.tar.gz bin/ec-linux-amd64
           sudo mv bin/ec-linux-amd64 /usr/local/bin/ec
           rm -rf ec.tar.gz bin
 
-      - name: 'Get changed files'
-        id: changed-files
-        run: |
-          set -euo pipefail
-          source .github/scripts/qc-resolve-base.sh
-          mapfile -t CHANGED_FILES < <(
-            git diff --name-only --diff-filter=ACMR "${BASE_REF}"...HEAD || true
-          )
-          if [[ ${#CHANGED_FILES[@]} -gt 0 ]] && \
-            [[ -n "${CHANGED_FILES[0]}" ]]; then
-            # shellcheck source=.github/scripts/qc-write-multiline-output.sh
-            source .github/scripts/qc-write-multiline-output.sh
-            qc_write_multiline_output files "${CHANGED_FILES[@]}"
-            echo 'any_changed=true' >> "$GITHUB_OUTPUT"
-          else
-            echo 'any_changed=false' >> "$GITHUB_OUTPUT"
-          fi
-
       - name: 'Run editorconfig-checker'
         env:
-          QC_ANY_CHANGED: ${{ steps.changed-files.outputs.any_changed }}
-          QC_FILES: ${{ steps.changed-files.outputs.files }}
+          QC_FILES: ${{ needs.detect.outputs.editorconfig_files }}
         run: |
           set -euo pipefail
           cd "$GITHUB_WORKSPACE"
-          if [[ "${QC_ANY_CHANGED}" != "true" ]]; then
-            echo 'No changed files to check'
-            exit 0
-          fi
-          readarray -t raw < <(
-            printf '%s\n' "${QC_FILES}"
-          )
           paths=()
-          for file in "${raw[@]}"; do
+          while IFS= read -r file; do
             [[ -z "${file}" ]] && continue
             [[ -f "${file}" ]] || continue
             paths+=( "${file}" )
-          done
+          done < <(printf '%s\n' "${QC_FILES}")
           if [[ ${#paths[@]} -eq 0 ]]; then
             echo 'No existing paths to check'
             exit 0
           fi
           ec "${paths[@]}"
 
-  shfmt:
-    if: ${{ inputs.shfmt_run == true }}
-    name: 'shfmt - Shell Formatter'
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: 'Checkout Code'
-        # actions/checkout v7.0.1
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-        with:
-          fetch-depth: 0
-
-      - name: 'Install shfmt'
-        env:
-          SHFMT_VERSION: 3.10.0
-        run: |
-          set -euo pipefail
-          url="https://github.com/mvdan/sh/releases/download/v${SHFMT_VERSION}/shfmt_v${SHFMT_VERSION}_linux_amd64"
-          curl -fsSL "$url" -o shfmt
-          chmod +x shfmt
-          sudo mv shfmt /usr/local/bin/
-
-      - name: 'Get changed shell files'
-        id: changed-files
-        run: |
-          set -euo pipefail
-          source .github/scripts/qc-resolve-base.sh
-          mapfile -t CHANGED_FILES < <(
-            git diff --name-only --diff-filter=ACMR "${BASE_REF}"...HEAD |
-              grep -E '\.(sh|bash|zsh)$' || true
-          )
-          if [[ ${#CHANGED_FILES[@]} -gt 0 ]] && \
-            [[ -n "${CHANGED_FILES[0]}" ]]; then
-            # shellcheck source=.github/scripts/qc-write-multiline-output.sh
-            source .github/scripts/qc-write-multiline-output.sh
-            qc_write_multiline_output files "${CHANGED_FILES[@]}"
-            echo 'any_changed=true' >> "$GITHUB_OUTPUT"
-          else
-            echo 'any_changed=false' >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: 'Run shfmt'
-        env:
-          QC_ANY_CHANGED: ${{ steps.changed-files.outputs.any_changed }}
-          QC_FILES: ${{ steps.changed-files.outputs.files }}
-        run: |
-          set -euo pipefail
-          cd "$GITHUB_WORKSPACE"
-          if [[ "${QC_ANY_CHANGED}" != "true" ]]; then
-            echo 'No shell files to check'
-            exit 0
-          fi
-          readarray -t raw < <(
-            printf '%s\n' "${QC_FILES}"
-          )
-          paths=()
-          for file in "${raw[@]}"; do
-            [[ -z "${file}" ]] && continue
-            [[ -f "${file}" ]] || continue
-            paths+=( "${file}" )
-          done
-          if [[ ${#paths[@]} -eq 0 ]]; then
-            echo 'No existing paths to check'
-            exit 0
-          fi
-          shfmt -d "${paths[@]}"
-
   golangci-lint:
-    if: ${{ inputs.golangci_lint_run == true }}
     name: 'golangci-lint - Go Linter'
+    needs: detect
+    if: needs.detect.outputs.go_count != '0'
     runs-on: ubuntu-latest
 
     steps:
@@ -1097,17 +688,16 @@ jobs:
         # actions/setup-go v7.0.0
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
         with:
-          go-version: ${{ inputs.go_version }}
+          go-version: 'stable'
 
       - name: 'Install golangci-lint'
-        env:
-          GOLANGCI_LINT_VERSION: 2.1.6
         run: |
           set -euo pipefail
           base_url="https://github.com/golangci/golangci-lint/releases/download"
-          tag="v${GOLANGCI_LINT_VERSION}"
-          archive="golangci-lint-${GOLANGCI_LINT_VERSION}-linux-amd64.tar.gz"
-          checksums="golangci-lint-${GOLANGCI_LINT_VERSION}-checksums.txt"
+          tag="v${QC_GOLANGCI_LINT_VERSION}"
+          version="${QC_GOLANGCI_LINT_VERSION}"
+          archive="golangci-lint-${version}-linux-amd64.tar.gz"
+          checksums="golangci-lint-${version}-checksums.txt"
           tmpdir="$(mktemp -d)"
           curl -fsSL -o "${tmpdir}/${archive}" \
             "${base_url}/${tag}/${archive}"
@@ -1119,37 +709,46 @@ jobs:
           echo "${expected}  ${tmpdir}/${archive}" | \
             sha256sum --check --strict -
           tar -xzf "${tmpdir}/${archive}" -C "${tmpdir}"
-          extract_dir="golangci-lint-${GOLANGCI_LINT_VERSION}-linux-amd64"
+          extract_dir="golangci-lint-${version}-linux-amd64"
           sudo install -m 0755 \
             "${tmpdir}/${extract_dir}/golangci-lint" \
             /usr/local/bin/golangci-lint
           rm -rf "${tmpdir}"
 
-      - name: 'Get changed Go files'
-        id: changed-files
-        run: |
-          set -euo pipefail
-          source .github/scripts/qc-resolve-base.sh
-          mapfile -t CHANGED_FILES < <(
-            git diff --name-only --diff-filter=ACMR "${BASE_REF}"...HEAD |
-              grep -E '\.go$' || true
-          )
-          if [[ ${#CHANGED_FILES[@]} -gt 0 ]] && \
-            [[ -n "${CHANGED_FILES[0]}" ]]; then
-            echo 'any_changed=true' >> "$GITHUB_OUTPUT"
-          else
-            echo 'any_changed=false' >> "$GITHUB_OUTPUT"
-          fi
-
       - name: 'Run golangci-lint'
-        env:
-          QC_ANY_CHANGED: ${{ steps.changed-files.outputs.any_changed }}
         run: |
           set -euo pipefail
           cd "$GITHUB_WORKSPACE"
+          # shellcheck source=.github/scripts/qc-resolve-base.sh
           source .github/scripts/qc-resolve-base.sh
-          if [[ "${QC_ANY_CHANGED}" != "true" ]]; then
-            echo 'No Go files to check'
-            exit 0
-          fi
           golangci-lint run --new-from-rev="${BASE_REF}" ./...
+
+  summary:
+    name: checks
+    needs:
+      - detect
+      - eslint
+      - prettier
+      - markdownlint
+      - yamllint
+      - shellcheck
+      - shfmt
+      - ruff
+      - taplo
+      - hadolint
+      - jq
+      - stylua
+      - typos
+      - editorconfig
+      - golangci-lint
+    # Required-check pattern for skipped-but-required jobs: the aggregate
+    # reports success when every applicable tool job passed and every
+    # skipped job was intentionally skipped.
+    # yamllint disable-line rule:line-length
+    if: ${{ always() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 'All applicable quality checks passed'
+        run: |
+          echo 'All applicable quality checks passed.'
