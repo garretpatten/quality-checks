@@ -51,8 +51,9 @@ on:
 
 env:
   QC_DIFF_BASE: ${{ inputs.diff_base }}
-  # Internal detail; the ephemeral static server uses a fixed high port.
   QC_STATIC_PORT: '8765'
+  # Pinned serve version for the ephemeral local static server.
+  QC_SERVE_VERSION: '14.2.6'
 
 jobs:
   detect:
@@ -302,14 +303,21 @@ jobs:
       - detect
       - axe
       - lighthouse
-    # Required-check pattern for skipped-but-required jobs: the aggregate
-    # reports success when every applicable audit job passed and every
-    # skipped job was intentionally skipped.
-    # yamllint disable-line rule:line-length
-    if: ${{ always() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') }}
+    # Required-check pattern: the aggregate always runs so the context is
+    # reported even when audit jobs were skipped, and fails explicitly
+    # when any needed job failed or the run was cancelled.
+    if: ${{ always() }}
     runs-on: ubuntu-latest
 
     steps:
+      - name: 'Fail on any failed or cancelled job'
+        # yamllint disable-line rule:line-length
+        if: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
+        run: |
+          echo 'At least one applicable accessibility check failed or' \
+            'the run was cancelled.' >&2
+          exit 1
+
       - name: 'All applicable accessibility checks passed'
         run: |
           echo 'All applicable accessibility checks passed.'
