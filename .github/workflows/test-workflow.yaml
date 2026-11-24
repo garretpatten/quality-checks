@@ -6,6 +6,11 @@ on:
     branches:
       - master
   workflow_dispatch:
+  schedule:
+    # Weekly fixture-coverage self-test: scheduled runs diff against the
+    # commit that predates docs/fixtures/lint-samples, so every linter's
+    # real path runs even when no PR touches the fixture directory.
+    - cron: '0 5 * * 1'
 
 permissions:
   contents: read
@@ -54,7 +59,8 @@ jobs:
     name: 'Linters'
     uses: ./.github/workflows/quality-checks.yaml
     with:
-      diff_base: ${{ github.event.pull_request.base.sha || '' }}
+      # yamllint disable-line rule:line-length
+      diff_base: ${{ github.event.pull_request.base.sha || (github.event_name == 'schedule' && '901110a2cefe1eb86e8aba0dea5e253a8b74e436' || '') }}
 
   accessibility:
     name: 'Accessibility Audits'
