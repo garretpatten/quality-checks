@@ -58,6 +58,11 @@ metadata, CI and quality, and exceptions.
    and skip when no matching paths exist.
 5. **Line length**: `.yamllint` max 80 columns; `# yamllint disable-line` only for
    long action SHAs.
+6. **Reusable workflow helpers**: jobs that need `.github/scripts/qc-*.sh` must
+   check out this repository at `${{ job.workflow_sha }}` into `.qc-tooling`
+   (`persist-credentials: false`) and source helpers from `QC_SCRIPTS`. Never
+   source `.github/scripts/` from the caller workspace — that path only exists
+   when quality-checks is the caller.
 
 Do not commit unless the user asks.
 

@@ -161,6 +161,8 @@ jobs:
     if: ${{ inputs.eslint_run == true }}
     name: 'ESLint - JavaScript/TypeScript Linter'
     runs-on: ubuntu-latest
+    env:
+      QC_SCRIPTS: ${{ github.workspace }}/.qc-tooling/.github/scripts
 
     steps:
       - name: 'Checkout Code'
@@ -168,6 +170,17 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
+
+      # Helpers live in this repository, not in the caller checkout.
+      - name: 'Checkout quality-checks tooling'
+        # actions/checkout v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: .qc-tooling
+          persist-credentials: false
+          sparse-checkout: .github/scripts
 
       - name: 'Setup Node.js'
         # actions/setup-node v7.1.0
@@ -211,7 +224,7 @@ jobs:
           if [[ ${#CHANGED_FILES[@]} -gt 0 ]] && \
             [[ -n "${CHANGED_FILES[0]}" ]]; then
             # shellcheck source=.github/scripts/qc-write-multiline-output.sh
-            source .github/scripts/qc-write-multiline-output.sh
+            source "${QC_SCRIPTS}/qc-write-multiline-output.sh"
             qc_write_multiline_output files "${CHANGED_FILES[@]}"
             echo 'any_changed=true' >> "$GITHUB_OUTPUT"
           else
@@ -248,6 +261,8 @@ jobs:
     if: ${{ inputs.hadolint_run == true }}
     name: 'Hadolint - Dockerfile Linter'
     runs-on: ubuntu-latest
+    env:
+      QC_SCRIPTS: ${{ github.workspace }}/.qc-tooling/.github/scripts
 
     steps:
       - name: 'Checkout Code'
@@ -255,6 +270,17 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
+
+      # Helpers live in this repository, not in the caller checkout.
+      - name: 'Checkout quality-checks tooling'
+        # actions/checkout v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: .qc-tooling
+          persist-credentials: false
+          sparse-checkout: .github/scripts
 
       - name: 'Install Hadolint'
         run: |
@@ -286,7 +312,7 @@ jobs:
           if [[ ${#CHANGED_FILES[@]} -gt 0 ]] && \
             [[ -n "${CHANGED_FILES[0]}" ]]; then
             # shellcheck source=.github/scripts/qc-write-multiline-output.sh
-            source .github/scripts/qc-write-multiline-output.sh
+            source "${QC_SCRIPTS}/qc-write-multiline-output.sh"
             qc_write_multiline_output files "${CHANGED_FILES[@]}"
             echo 'any_changed=true' >> "$GITHUB_OUTPUT"
           else
@@ -323,6 +349,8 @@ jobs:
     if: ${{ inputs.jq_run == true }}
     name: 'jq - JSON Validator'
     runs-on: ubuntu-latest
+    env:
+      QC_SCRIPTS: ${{ github.workspace }}/.qc-tooling/.github/scripts
 
     steps:
       - name: 'Checkout Code'
@@ -330,6 +358,17 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
+
+      # Helpers live in this repository, not in the caller checkout.
+      - name: 'Checkout quality-checks tooling'
+        # actions/checkout v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: .qc-tooling
+          persist-credentials: false
+          sparse-checkout: .github/scripts
 
       - name: 'Get changed JSON files'
         id: changed-files
@@ -353,7 +392,7 @@ jobs:
           if [[ ${#CHANGED_FILES[@]} -gt 0 ]] && \
             [[ -n "${CHANGED_FILES[0]}" ]]; then
             # shellcheck source=.github/scripts/qc-write-multiline-output.sh
-            source .github/scripts/qc-write-multiline-output.sh
+            source "${QC_SCRIPTS}/qc-write-multiline-output.sh"
             qc_write_multiline_output files "${CHANGED_FILES[@]}"
             echo 'any_changed=true' >> "$GITHUB_OUTPUT"
           else
@@ -385,6 +424,8 @@ jobs:
     if: ${{ inputs.markdownlint_run == true }}
     name: 'Markdownlint - Markdown Linter'
     runs-on: ubuntu-latest
+    env:
+      QC_SCRIPTS: ${{ github.workspace }}/.qc-tooling/.github/scripts
 
     steps:
       - name: 'Checkout Code'
@@ -392,6 +433,17 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
+
+      # Helpers live in this repository, not in the caller checkout.
+      - name: 'Checkout quality-checks tooling'
+        # actions/checkout v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: .qc-tooling
+          persist-credentials: false
+          sparse-checkout: .github/scripts
 
       - name: 'Setup Node.js'
         # actions/setup-node v7.1.0
@@ -422,12 +474,12 @@ jobs:
           mapfile -t CHANGED_FILES < <(
             git diff --name-only --diff-filter=ACMR "${BASE_REF}"...HEAD |
               grep -E '\.(md|markdown)$' |
-              .github/scripts/qc-filter-changed-paths.sh || true
+              "${QC_SCRIPTS}/qc-filter-changed-paths.sh" || true
           )
           if [[ ${#CHANGED_FILES[@]} -gt 0 ]] && \
             [[ -n "${CHANGED_FILES[0]}" ]]; then
             # shellcheck source=.github/scripts/qc-write-multiline-output.sh
-            source .github/scripts/qc-write-multiline-output.sh
+            source "${QC_SCRIPTS}/qc-write-multiline-output.sh"
             qc_write_multiline_output files "${CHANGED_FILES[@]}"
             echo 'any_changed=true' >> "$GITHUB_OUTPUT"
           else
@@ -464,6 +516,8 @@ jobs:
     if: ${{ inputs.prettier_run == true }}
     name: 'Prettier - Code Formatter'
     runs-on: ubuntu-latest
+    env:
+      QC_SCRIPTS: ${{ github.workspace }}/.qc-tooling/.github/scripts
 
     steps:
       - name: 'Checkout Code'
@@ -471,6 +525,17 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
+
+      # Helpers live in this repository, not in the caller checkout.
+      - name: 'Checkout quality-checks tooling'
+        # actions/checkout v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: .qc-tooling
+          persist-credentials: false
+          sparse-checkout: .github/scripts
 
       - name: 'Setup Node.js'
         # actions/setup-node v7.1.0
@@ -502,12 +567,12 @@ jobs:
             git diff --name-only --diff-filter=ACMR "${BASE_REF}"...HEAD |
               grep -E \
                 '\.(js|jsx|ts|tsx|json|css|scss|md|markdown)$' |
-              .github/scripts/qc-filter-changed-paths.sh || true
+              "${QC_SCRIPTS}/qc-filter-changed-paths.sh" || true
           )
           if [[ ${#CHANGED_FILES[@]} -gt 0 ]] && \
             [[ -n "${CHANGED_FILES[0]}" ]]; then
             # shellcheck source=.github/scripts/qc-write-multiline-output.sh
-            source .github/scripts/qc-write-multiline-output.sh
+            source "${QC_SCRIPTS}/qc-write-multiline-output.sh"
             qc_write_multiline_output files "${CHANGED_FILES[@]}"
             echo 'any_changed=true' >> "$GITHUB_OUTPUT"
           else
@@ -547,6 +612,8 @@ jobs:
     if: ${{ inputs.ruff_run == true }}
     name: 'Ruff - Python Linter'
     runs-on: ubuntu-latest
+    env:
+      QC_SCRIPTS: ${{ github.workspace }}/.qc-tooling/.github/scripts
 
     steps:
       - name: 'Checkout Code'
@@ -554,6 +621,17 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
+
+      # Helpers live in this repository, not in the caller checkout.
+      - name: 'Checkout quality-checks tooling'
+        # actions/checkout v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: .qc-tooling
+          persist-credentials: false
+          sparse-checkout: .github/scripts
 
       - name: 'Install Ruff'
         run: |
@@ -582,7 +660,7 @@ jobs:
           if [[ ${#CHANGED_FILES[@]} -gt 0 ]] && \
             [[ -n "${CHANGED_FILES[0]}" ]]; then
             # shellcheck source=.github/scripts/qc-write-multiline-output.sh
-            source .github/scripts/qc-write-multiline-output.sh
+            source "${QC_SCRIPTS}/qc-write-multiline-output.sh"
             qc_write_multiline_output files "${CHANGED_FILES[@]}"
             echo 'any_changed=true' >> "$GITHUB_OUTPUT"
           else
@@ -619,6 +697,8 @@ jobs:
     if: ${{ inputs.shellcheck_run == true }}
     name: 'ShellCheck - Shell Script Linter'
     runs-on: ubuntu-latest
+    env:
+      QC_SCRIPTS: ${{ github.workspace }}/.qc-tooling/.github/scripts
 
     steps:
       - name: 'Checkout Code'
@@ -626,6 +706,17 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
+
+      # Helpers live in this repository, not in the caller checkout.
+      - name: 'Checkout quality-checks tooling'
+        # actions/checkout v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: .qc-tooling
+          persist-credentials: false
+          sparse-checkout: .github/scripts
 
       - name: 'Get changed shell files'
         id: changed-files
@@ -649,7 +740,7 @@ jobs:
           if [[ ${#CHANGED_FILES[@]} -gt 0 ]] && \
             [[ -n "${CHANGED_FILES[0]}" ]]; then
             # shellcheck source=.github/scripts/qc-write-multiline-output.sh
-            source .github/scripts/qc-write-multiline-output.sh
+            source "${QC_SCRIPTS}/qc-write-multiline-output.sh"
             qc_write_multiline_output files "${CHANGED_FILES[@]}"
             echo 'any_changed=true' >> "$GITHUB_OUTPUT"
           else
@@ -706,6 +797,8 @@ jobs:
     if: ${{ inputs.taplo_run == true }}
     name: 'Taplo - TOML Linter'
     runs-on: ubuntu-latest
+    env:
+      QC_SCRIPTS: ${{ github.workspace }}/.qc-tooling/.github/scripts
 
     steps:
       - name: 'Checkout Code'
@@ -713,6 +806,17 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
+
+      # Helpers live in this repository, not in the caller checkout.
+      - name: 'Checkout quality-checks tooling'
+        # actions/checkout v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: .qc-tooling
+          persist-credentials: false
+          sparse-checkout: .github/scripts
 
       - name: 'Install Taplo'
         run: |
@@ -745,7 +849,7 @@ jobs:
           if [[ ${#CHANGED_FILES[@]} -gt 0 ]] && \
             [[ -n "${CHANGED_FILES[0]}" ]]; then
             # shellcheck source=.github/scripts/qc-write-multiline-output.sh
-            source .github/scripts/qc-write-multiline-output.sh
+            source "${QC_SCRIPTS}/qc-write-multiline-output.sh"
             qc_write_multiline_output files "${CHANGED_FILES[@]}"
             echo 'any_changed=true' >> "$GITHUB_OUTPUT"
           else
@@ -782,6 +886,8 @@ jobs:
     if: ${{ inputs.yamllint_run == true }}
     name: 'Yamllint - YAML Linter'
     runs-on: ubuntu-latest
+    env:
+      QC_SCRIPTS: ${{ github.workspace }}/.qc-tooling/.github/scripts
 
     steps:
       - name: 'Checkout Code'
@@ -789,6 +895,17 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
+
+      # Helpers live in this repository, not in the caller checkout.
+      - name: 'Checkout quality-checks tooling'
+        # actions/checkout v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: .qc-tooling
+          persist-credentials: false
+          sparse-checkout: .github/scripts
 
       - name: 'Install yamllint'
         run: |
@@ -817,7 +934,7 @@ jobs:
           if [[ ${#CHANGED_FILES[@]} -gt 0 ]] && \
             [[ -n "${CHANGED_FILES[0]}" ]]; then
             # shellcheck source=.github/scripts/qc-write-multiline-output.sh
-            source .github/scripts/qc-write-multiline-output.sh
+            source "${QC_SCRIPTS}/qc-write-multiline-output.sh"
             qc_write_multiline_output files "${CHANGED_FILES[@]}"
             echo 'any_changed=true' >> "$GITHUB_OUTPUT"
           else
@@ -855,6 +972,7 @@ jobs:
     name: 'typos - Spell Checker'
     runs-on: ubuntu-latest
     env:
+      QC_SCRIPTS: ${{ github.workspace }}/.qc-tooling/.github/scripts
       QC_TYPOS_CONFIG: ${{ inputs.typos_config }}
 
     steps:
@@ -863,6 +981,17 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
+
+      # Helpers live in this repository, not in the caller checkout.
+      - name: 'Checkout quality-checks tooling'
+        # actions/checkout v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: .qc-tooling
+          persist-credentials: false
+          sparse-checkout: .github/scripts
 
       - name: 'Install typos'
         env:
@@ -882,7 +1011,7 @@ jobs:
         run: |
           set -euo pipefail
           # shellcheck source=.github/scripts/qc-resolve-base.sh
-          source .github/scripts/qc-resolve-base.sh
+          source "${QC_SCRIPTS}/qc-resolve-base.sh"
           # Prose only (md, txt, rst, html, LICENSE) — not code or YAML.
           typos_pat='\.(md|markdown|txt|text|rst|adoc|asciidoc|html)$'
           license_pat='(^|/)(LICENSE|COPYING|NOTICE)(\.[^/]+)?$'
@@ -893,7 +1022,7 @@ jobs:
           if [[ ${#CHANGED_FILES[@]} -gt 0 ]] && \
             [[ -n "${CHANGED_FILES[0]}" ]]; then
             # shellcheck source=.github/scripts/qc-write-multiline-output.sh
-            source .github/scripts/qc-write-multiline-output.sh
+            source "${QC_SCRIPTS}/qc-write-multiline-output.sh"
             qc_write_multiline_output files "${CHANGED_FILES[@]}"
             echo 'any_changed=true' >> "$GITHUB_OUTPUT"
           else
@@ -925,7 +1054,7 @@ jobs:
             exit 0
           fi
           # shellcheck source=.github/scripts/qc-typos-args.sh
-          source .github/scripts/qc-typos-args.sh
+          source "${QC_SCRIPTS}/qc-typos-args.sh"
           if [[ ${#TYPOS_CLI_ARGS[@]} -gt 0 ]]; then
             echo "Using typos config: ${TYPOS_CLI_ARGS[1]}"
           else
@@ -937,6 +1066,8 @@ jobs:
     if: ${{ inputs.editorconfig_run == true }}
     name: 'EditorConfig - Style Consistency'
     runs-on: ubuntu-latest
+    env:
+      QC_SCRIPTS: ${{ github.workspace }}/.qc-tooling/.github/scripts
 
     steps:
       - name: 'Checkout Code'
@@ -944,6 +1075,17 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
+
+      # Helpers live in this repository, not in the caller checkout.
+      - name: 'Checkout quality-checks tooling'
+        # actions/checkout v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: .qc-tooling
+          persist-credentials: false
+          sparse-checkout: .github/scripts
 
       - name: 'Install editorconfig-checker'
         env:
@@ -960,14 +1102,14 @@ jobs:
         id: changed-files
         run: |
           set -euo pipefail
-          source .github/scripts/qc-resolve-base.sh
+          source "${QC_SCRIPTS}/qc-resolve-base.sh"
           mapfile -t CHANGED_FILES < <(
             git diff --name-only --diff-filter=ACMR "${BASE_REF}"...HEAD || true
           )
           if [[ ${#CHANGED_FILES[@]} -gt 0 ]] && \
             [[ -n "${CHANGED_FILES[0]}" ]]; then
             # shellcheck source=.github/scripts/qc-write-multiline-output.sh
-            source .github/scripts/qc-write-multiline-output.sh
+            source "${QC_SCRIPTS}/qc-write-multiline-output.sh"
             qc_write_multiline_output files "${CHANGED_FILES[@]}"
             echo 'any_changed=true' >> "$GITHUB_OUTPUT"
           else
@@ -1004,6 +1146,8 @@ jobs:
     if: ${{ inputs.shfmt_run == true }}
     name: 'shfmt - Shell Formatter'
     runs-on: ubuntu-latest
+    env:
+      QC_SCRIPTS: ${{ github.workspace }}/.qc-tooling/.github/scripts
 
     steps:
       - name: 'Checkout Code'
@@ -1011,6 +1155,17 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
+
+      # Helpers live in this repository, not in the caller checkout.
+      - name: 'Checkout quality-checks tooling'
+        # actions/checkout v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: .qc-tooling
+          persist-credentials: false
+          sparse-checkout: .github/scripts
 
       - name: 'Install shfmt'
         env:
@@ -1026,7 +1181,7 @@ jobs:
         id: changed-files
         run: |
           set -euo pipefail
-          source .github/scripts/qc-resolve-base.sh
+          source "${QC_SCRIPTS}/qc-resolve-base.sh"
           mapfile -t CHANGED_FILES < <(
             git diff --name-only --diff-filter=ACMR "${BASE_REF}"...HEAD |
               grep -E '\.(sh|bash|zsh)$' || true
@@ -1034,7 +1189,7 @@ jobs:
           if [[ ${#CHANGED_FILES[@]} -gt 0 ]] && \
             [[ -n "${CHANGED_FILES[0]}" ]]; then
             # shellcheck source=.github/scripts/qc-write-multiline-output.sh
-            source .github/scripts/qc-write-multiline-output.sh
+            source "${QC_SCRIPTS}/qc-write-multiline-output.sh"
             qc_write_multiline_output files "${CHANGED_FILES[@]}"
             echo 'any_changed=true' >> "$GITHUB_OUTPUT"
           else
@@ -1071,6 +1226,8 @@ jobs:
     if: ${{ inputs.golangci_lint_run == true }}
     name: 'golangci-lint - Go Linter'
     runs-on: ubuntu-latest
+    env:
+      QC_SCRIPTS: ${{ github.workspace }}/.qc-tooling/.github/scripts
 
     steps:
       - name: 'Checkout Code'
@@ -1078,6 +1235,17 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
+
+      # Helpers live in this repository, not in the caller checkout.
+      - name: 'Checkout quality-checks tooling'
+        # actions/checkout v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: .qc-tooling
+          persist-credentials: false
+          sparse-checkout: .github/scripts
 
       - name: 'Setup Go'
         # actions/setup-go v7.0.0
@@ -1115,7 +1283,7 @@ jobs:
         id: changed-files
         run: |
           set -euo pipefail
-          source .github/scripts/qc-resolve-base.sh
+          source "${QC_SCRIPTS}/qc-resolve-base.sh"
           mapfile -t CHANGED_FILES < <(
             git diff --name-only --diff-filter=ACMR "${BASE_REF}"...HEAD |
               grep -E '\.go$' || true
@@ -1133,7 +1301,7 @@ jobs:
         run: |
           set -euo pipefail
           cd "$GITHUB_WORKSPACE"
-          source .github/scripts/qc-resolve-base.sh
+          source "${QC_SCRIPTS}/qc-resolve-base.sh"
           if [[ "${QC_ANY_CHANGED}" != "true" ]]; then
             echo 'No Go files to check'
             exit 0

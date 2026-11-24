@@ -134,6 +134,12 @@ jobs:
 uses: garretpatten/quality-checks/.github/workflows/quality-checks.yaml@<full-commit-sha>
 ```
 
+The reusable workflows check out this repository at `job.workflow_sha` into
+`.qc-tooling` so the helper scripts under `.github/scripts/` are available
+when the caller is a different repository. Callers do not need to vendor
+those scripts. The ref you pin (a commit SHA or `@master`) selects both the
+workflow and the matching helpers.
+
 ### Comparing against the correct base commit
 
 By default, workflows diff against `origin/main`, then `origin/master`, otherwise
@@ -297,6 +303,7 @@ to `master`.
 tests/
 ├── scripts/*.bats          # scripts/lint-changed.sh
 ├── github-scripts/*.bats   # .github/scripts/qc-*.sh
+├── workflows/*.bats        # reusable workflow helper-path contract
 ├── helpers/setup.bash      # sandbox, stubs, fixture git repos
 ├── stubs/                  # fake npm, npx, shfmt, curl, …
 └── fixtures/               # changed-path lists, typo config, sample YAML
