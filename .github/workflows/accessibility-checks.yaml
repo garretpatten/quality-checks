@@ -81,6 +81,7 @@ jobs:
     name: 'axe-core - Accessibility Audit'
     runs-on: ubuntu-latest
     env:
+      QC_SCRIPTS: ${{ github.workspace }}/.qc-tooling/.github/scripts
       QC_URLS: ${{ inputs.urls }}
       QC_LOCAL_HTML_PATHS: ${{ inputs.local_html_paths }}
 
@@ -90,6 +91,17 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
+
+      # Helpers live in this repository, not in the caller checkout.
+      - name: 'Checkout quality-checks tooling'
+        # actions/checkout v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: .qc-tooling
+          persist-credentials: false
+          sparse-checkout: .github/scripts
 
       - name: 'Setup Node.js'
         # actions/setup-node v7.1.0
@@ -101,14 +113,14 @@ jobs:
         run: |
           set -euo pipefail
           # shellcheck source=.github/scripts/qc-axe-setup.sh
-          source .github/scripts/qc-axe-setup.sh
+          source "${QC_SCRIPTS}/qc-axe-setup.sh"
 
       - name: 'Collect audit targets'
         id: targets
         run: |
           set -euo pipefail
           cd "$GITHUB_WORKSPACE"
-          source .github/scripts/qc-resolve-base.sh
+          source "${QC_SCRIPTS}/qc-resolve-base.sh"
 
           mapfile -t remote_urls < <(
             printf '%s\n' "${QC_URLS}" |
@@ -134,7 +146,7 @@ jobs:
           done
 
           # shellcheck source=.github/scripts/qc-write-multiline-output.sh
-          source .github/scripts/qc-write-multiline-output.sh
+          source "${QC_SCRIPTS}/qc-write-multiline-output.sh"
           qc_write_multiline_output remote_urls "${remote_urls[@]}"
           qc_write_multiline_output html_paths "${html_paths[@]}"
 
@@ -194,6 +206,7 @@ jobs:
     name: 'Lighthouse - Accessibility Audit'
     runs-on: ubuntu-latest
     env:
+      QC_SCRIPTS: ${{ github.workspace }}/.qc-tooling/.github/scripts
       QC_URLS: ${{ inputs.urls }}
       QC_LHCI_MIN_SCORE: ${{ inputs.lighthouse_min_accessibility }}
 
@@ -201,6 +214,17 @@ jobs:
       - name: 'Checkout Code'
         # actions/checkout v7.0.1
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      # Helpers live in this repository, not in the caller checkout.
+      - name: 'Checkout quality-checks tooling'
+        # actions/checkout v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: .qc-tooling
+          persist-credentials: false
+          sparse-checkout: .github/scripts
 
       - name: 'Validate URLs'
         id: urls
@@ -216,7 +240,7 @@ jobs:
             exit 1
           fi
           # shellcheck source=.github/scripts/qc-write-multiline-output.sh
-          source .github/scripts/qc-write-multiline-output.sh
+          source "${QC_SCRIPTS}/qc-write-multiline-output.sh"
           qc_write_multiline_output list "${urls[@]}"
 
       - name: 'Write Lighthouse CI config'
