@@ -31,8 +31,9 @@ assert_count() {
 @test "qc_classify_changed emits zero counts and no heredocs for no paths" {
 	local log="${SANDBOX}/out.log"
 	classify_logged "${log}"
-	assert_equal "$(wc -l <"${log}")" 13
+	assert_equal "$(wc -l <"${log}")" 14
 	assert_count "${log}" eslint 0
+	assert_count "${log}" actionlint 0
 	assert_count "${log}" editorconfig 0
 	if grep -q '_files<<' "${log}"; then
 		fail 'no paths should emit no heredoc blocks'
@@ -53,6 +54,7 @@ assert_count() {
 	assert_count "${log}" toml 0
 	assert_count "${log}" docker 0
 	assert_count "${log}" go 0
+	assert_count "${log}" actionlint 0
 	assert_count "${log}" stylua 0
 	assert_count "${log}" jq 0
 	assert_count "${log}" prose 0
@@ -86,6 +88,7 @@ assert_count() {
 	assert_count "${log}" prettier 4 # md, markdown, json, scss
 	assert_count "${log}" markdownlint 2
 	assert_count "${log}" yaml 2
+	assert_count "${log}" actionlint 1
 	assert_count "${log}" shell 1
 	assert_count "${log}" ruff 1
 	assert_count "${log}" toml 1

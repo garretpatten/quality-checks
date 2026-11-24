@@ -166,6 +166,7 @@ files, vendor and build-output paths excluded) and classifies each path:
 | `.toml`                                                     | Taplo                         |
 | `Dockerfile`, `*.dockerfile`                                | Hadolint                      |
 | `.go`                                                       | golangci-lint                 |
+| `.github/workflows/*.yaml`                                  | actionlint                    |
 | `.lua`                                                      | StyLua                        |
 | `.txt` `.rst` `.adoc` `.html`, `LICENSE`/`COPYING`/`NOTICE` | typos                         |
 | any changed file                                            | EditorConfig                  |
@@ -198,7 +199,7 @@ Dependencies are installed with `npm ci` when a lockfile exists, with
 | ------------------------------------- | ------- | --------- | -------------------------------------------------------- |
 | `diff_base`                           | string  | _(empty)_ | Git ref for changed `.html` detection                    |
 | `urls`                                | string  | _(empty)_ | URLs to audit (one per line; required for Lighthouse)    |
-| `local_html_paths`                    | string  | _(empty)_ | Extra repo HTML paths served locally for axe             |
+| `local_html_paths`                    | string  | _(empty)_ | Newline-separated repo HTML paths served locally for axe |
 | `lighthouse_min_accessibility`        | string  | `0.9`     | Minimum Lighthouse accessibility score (0–1)             |
 | `lighthouse_temporary_public_storage` | boolean | `false`   | Upload the Lighthouse report to public temporary storage |
 
@@ -216,6 +217,7 @@ that config is used instead of the generated accessibility-only defaults.
 | Tool              | Files                             | Notes                                             |
 | ----------------- | --------------------------------- | ------------------------------------------------- |
 | **EditorConfig**  | Changed text files                | Uses `ec`; respects `.editorconfig`               |
+| **actionlint**    | `.github/workflows/*.yaml`        | GitHub Actions schema and expression checks       |
 | **ESLint**        | `.js`, `.mjs`, `.cjs`, `.ts`, …   | Prefers the repo's local install, then pinned 10  |
 | **golangci-lint** | Go packages                       | `--new-from-rev` on PR diff                       |
 | **Hadolint**      | `Dockerfile`, `*.dockerfile`      | Dockerfile best practices                         |
@@ -280,6 +282,8 @@ the directory.
   pinned defaults are built in.
 - The optional `token` secret was removed — StyLua is now a pinned binary
   download, so the workflows need no secrets at all.
+- `urls` no longer accepts comma-separated values — one URL per line only
+  (matching `local_html_paths`).
 - Require the single **`Quality Checks / checks`** context in branch
   protection instead of the individual job names.
 

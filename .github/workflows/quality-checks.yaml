@@ -37,6 +37,7 @@ env:
   QC_EC_VERSION: 'v3.7.0'
   QC_TYPOS_VERSION: 'v1.47.0'
   QC_GOLANGCI_LINT_VERSION: '2.1.6'
+  QC_ACTIONLINT_VERSION: 'v1.7.12'
   QC_STYLUA_VERSION: 'v2.4.1'
   QC_SERVE_VERSION: '14.2.6'
 
@@ -89,6 +90,8 @@ jobs:
       docker_files: ${{ steps.classify.outputs.docker_files }}
       go_count: ${{ steps.classify.outputs.go_count }}
       go_files: ${{ steps.classify.outputs.go_files }}
+      actionlint_count: ${{ steps.classify.outputs.actionlint_count }}
+      actionlint_files: ${{ steps.classify.outputs.actionlint_files }}
       stylua_count: ${{ steps.classify.outputs.stylua_count }}
       stylua_files: ${{ steps.classify.outputs.stylua_files }}
       jq_count: ${{ steps.classify.outputs.jq_count }}
@@ -671,6 +674,51 @@ jobs:
           fi
           ec "${paths[@]}"
 
+  actionlint:
+    name: 'actionlint - Workflow Linter'
+    needs: detect
+    if: needs.detect.outputs.actionlint_count != '0'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 'Checkout Code'
+        # actions/checkout v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 1
+
+      - name: 'Install actionlint'
+        run: |
+          set -euo pipefail
+          org="rhysd"
+          base_url="https://github.com/${org}/${org}/releases/download"
+          archive="actionlint_${QC_ACTIONLINT_VERSION#v}_linux_amd64.tar.gz"
+          url="${base_url}/${QC_ACTIONLINT_VERSION}/${archive}"
+          tmpdir="$(mktemp -d)"
+          curl -fsSL "$url" -o "${tmpdir}/actionlint.tar.gz"
+          tar -xzf "${tmpdir}/actionlint.tar.gz" -C "${tmpdir}" actionlint
+          sudo install -m 0755 \
+            "${tmpdir}/actionlint" /usr/local/bin/actionlint
+          rm -rf "${tmpdir}"
+
+      - name: 'Run actionlint'
+        env:
+          QC_FILES: ${{ needs.detect.outputs.actionlint_files }}
+        run: |
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
+          paths=()
+          while IFS= read -r file; do
+            [[ -z "${file}" ]] && continue
+            [[ -f "${file}" ]] || continue
+            paths+=( "${file}" )
+          done < <(printf '%s\n' "${QC_FILES}")
+          if [[ ${#paths[@]} -eq 0 ]]; then
+            echo 'No existing paths to lint'
+            exit 0
+          fi
+          actionlint "${paths[@]}"
+
   golangci-lint:
     name: 'golangci-lint - Go Linter'
     needs: detect
@@ -740,6 +788,7 @@ jobs:
       - stylua
       - typos
       - editorconfig
+      - actionlint
       - golangci-lint
     # Required-check pattern for skipped-but-required jobs: the aggregate
     # reports success when every applicable tool job passed and every

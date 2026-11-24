@@ -16,6 +16,7 @@
 #   toml_files          Taplo
 #   docker_files        Hadolint
 #   go_files            golangci-lint
+#   actionlint_files    actionlint (.github/workflows YAML)
 #   stylua_files        StyLua
 #   jq_files            jq
 #   prose_files         typos (prose + LICENSE/COPYING/NOTICE)
@@ -31,7 +32,8 @@ qc_classify_changed() {
 
 	local -a eslint_files=() prettier_files=() markdownlint_files=()
 	local -a yaml_files=() shell_files=() ruff_files=() toml_files=()
-	local -a docker_files=() go_files=() stylua_files=() jq_files=()
+	local -a docker_files=() go_files=() actionlint_files=()
+	local -a stylua_files=() jq_files=()
 	local -a prose_files=() editorconfig_files=()
 
 	local file
@@ -87,9 +89,19 @@ qc_classify_changed() {
 		esac
 	done
 
+	# Workflow YAML gets both actionlint (schema/expressions) and yamllint
+	# (style), matching the detection mapping in README.
+	for file in ${changed[@]+"${changed[@]}"}; do
+		case "${file}" in
+		.github/workflows/*.yaml | .github/workflows/*.yml)
+			actionlint_files+=("${file}")
+			;;
+		esac
+	done
+
 	local tool delim
 	for tool in eslint prettier markdownlint yaml shell ruff toml docker \
-		go stylua jq prose editorconfig; do
+		go actionlint stylua jq prose editorconfig; do
 		local -n files="${tool}_files"
 		printf '%s_count=%s\n' "${tool}" "${#files[@]}"
 		if [[ ${#files[@]} -gt 0 ]]; then

@@ -79,7 +79,6 @@ jobs:
 
           mapfile -t remote_urls < <(
             printf '%s\n' "${QC_URLS}" |
-              tr ',' '\n' |
               sed '/^[[:space:]]*$/d' || true
           )
 
@@ -173,7 +172,15 @@ jobs:
             kill "${server_pid}" 2>/dev/null || true
           }
           trap cleanup EXIT
-          sleep 2
+          # Poll until the local server answers instead of sleeping a
+          # fixed time; a connection refused is retried (issue #37 L3).
+          # A 404 for the root path is fine - only connectivity matters.
+          root_url="http://127.0.0.1:${QC_STATIC_PORT}/"
+          if ! curl --noproxy '*' --retry 30 --retry-delay 1 \
+            --retry-connrefused -s -o /dev/null "${root_url}"; then
+            echo 'Local static server did not become ready' >&2
+            exit 1
+          fi
           for path in "${html_paths[@]}"; do
             [[ -z "${path}" ]] && continue
             url="http://127.0.0.1:${QC_STATIC_PORT}/${path}"
@@ -201,7 +208,6 @@ jobs:
           set -euo pipefail
           mapfile -t urls < <(
             printf '%s\n' "${QC_URLS}" |
-              tr ',' '\n' |
               sed '/^[[:space:]]*$/d' || true
           )
           if [[ ${#urls[@]} -eq 0 ]] || [[ -z "${urls[0]}" ]]; then
