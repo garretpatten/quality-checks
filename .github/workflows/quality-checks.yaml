@@ -45,6 +45,8 @@ jobs:
   detect:
     name: 'Detect Changed Files'
     runs-on: ubuntu-latest
+    env:
+      QC_SCRIPTS: ${{ github.workspace }}/.qc-tooling/.github/scripts
 
     steps:
       - name: 'Checkout Code'
@@ -53,19 +55,30 @@ jobs:
         with:
           fetch-depth: 0
 
+      # Helpers live in this repository, not in the caller checkout.
+      - name: 'Checkout quality-checks tooling'
+        # actions/checkout v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: .qc-tooling
+          persist-credentials: false
+          sparse-checkout: .github/scripts
+
       - name: 'Classify changed files'
         id: classify
         run: |
           set -euo pipefail
           cd "$GITHUB_WORKSPACE"
           # shellcheck source=.github/scripts/qc-resolve-base.sh
-          source .github/scripts/qc-resolve-base.sh
+          source "${QC_SCRIPTS}/qc-resolve-base.sh"
           mapfile -t CHANGED < <(
             git diff --name-only --diff-filter=ACMR "${BASE_REF}"...HEAD |
-              .github/scripts/qc-filter-changed-paths.sh || true
+              "${QC_SCRIPTS}/qc-filter-changed-paths.sh" || true
           )
           # shellcheck source=.github/scripts/qc-classify-changed.sh
-          source .github/scripts/qc-classify-changed.sh
+          source "${QC_SCRIPTS}/qc-classify-changed.sh"
           # Fragments (<list>_count and heredoc <list>_files blocks) are
           # never interpolated into this script; they flow through
           # GITHUB_OUTPUT into job env (issue #37 C1/S1).
@@ -586,6 +599,8 @@ jobs:
     needs: detect
     if: needs.detect.outputs.prose_count != '0'
     runs-on: ubuntu-latest
+    env:
+      QC_SCRIPTS: ${{ github.workspace }}/.qc-tooling/.github/scripts
 
     steps:
       - name: 'Checkout Code'
@@ -593,6 +608,17 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 1
+
+      # Helpers live in this repository, not in the caller checkout.
+      - name: 'Checkout quality-checks tooling'
+        # actions/checkout v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: .qc-tooling
+          persist-credentials: false
+          sparse-checkout: .github/scripts
 
       - name: 'Install typos'
         run: |
@@ -624,7 +650,7 @@ jobs:
             exit 0
           fi
           # shellcheck source=.github/scripts/qc-typos-args.sh
-          source .github/scripts/qc-typos-args.sh
+          source "${QC_SCRIPTS}/qc-typos-args.sh"
           if [[ ${#TYPOS_CLI_ARGS[@]} -gt 0 ]]; then
             echo "Using typos config: ${TYPOS_CLI_ARGS[1]}"
           else
@@ -717,13 +743,20 @@ jobs:
             echo 'No existing paths to lint'
             exit 0
           fi
-          actionlint "${paths[@]}"
+          # job.workflow_repository / workflow_sha identify the callee in
+          # reusable workflows; actionlint supports them on main but not in
+          # any release yet (rhysd/actionlint#757) — ignore until then.
+          actionlint \
+            -ignore 'property "workflow_(repository|sha)" is not defined' \
+            "${paths[@]}"
 
   golangci-lint:
     name: 'golangci-lint - Go Linter'
     needs: detect
     if: needs.detect.outputs.go_count != '0'
     runs-on: ubuntu-latest
+    env:
+      QC_SCRIPTS: ${{ github.workspace }}/.qc-tooling/.github/scripts
 
     steps:
       - name: 'Checkout Code'
@@ -731,6 +764,17 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
+
+      # Helpers live in this repository, not in the caller checkout.
+      - name: 'Checkout quality-checks tooling'
+        # actions/checkout v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: .qc-tooling
+          persist-credentials: false
+          sparse-checkout: .github/scripts
 
       - name: 'Setup Go'
         # actions/setup-go v7.0.0
@@ -768,7 +812,7 @@ jobs:
           set -euo pipefail
           cd "$GITHUB_WORKSPACE"
           # shellcheck source=.github/scripts/qc-resolve-base.sh
-          source .github/scripts/qc-resolve-base.sh
+          source "${QC_SCRIPTS}/qc-resolve-base.sh"
           golangci-lint run --new-from-rev="${BASE_REF}" ./...
 
   summary:

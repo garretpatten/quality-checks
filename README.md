@@ -122,6 +122,13 @@ uses: garretpatten/quality-checks/.github/workflows/quality-checks.yaml@<full-co
 No secrets are needed. The workflows never accept `secrets: inherit`; they
 run with the automatically generated read-only `github.token` scope.
 
+The reusable workflows also check out this repository at
+`job.workflow_sha` into `.qc-tooling` so the helper scripts under
+`.github/scripts/` are available when the caller is a different
+repository. Callers do not need to vendor those scripts. The ref you pin
+(a commit SHA or `@v2`) selects both the workflow and the matching
+helpers.
+
 ### One required check
 
 Require a single context per workflow in branch protection — the names are
@@ -307,6 +314,40 @@ the directory.
 
 - [Security Guardrails](https://github.com/garretpatten/security-guardrails) —
   companion repo for SAST, secrets, and supply-chain checks.
+
+## Testing
+
+Helper scripts used by the reusable workflows and by `scripts/lint-changed.sh`
+are covered by [bats-core](https://github.com/bats-core/bats-core) unit tests
+under `tests/`. Each test runs in a sandbox and stubs network-facing commands,
+so the suite does not need network access.
+
+Install bats-core 1.14.0 plus `bats-support`, `bats-assert`, and `bats-file`
+from release tarballs (once per clone):
+
+```bash
+./scripts/install-bats.sh
+npm run test:shell
+```
+
+`install-bats.sh` writes them under `.tools/` (gitignored). If you already have
+bats and the libraries installed (Homebrew, a distro package, or
+`~/.local`), you can skip the installer and run `npm run test:shell` or
+`bats --recursive tests`.
+
+The `unit-tests` job in `.github/workflows/test-workflow.yaml` runs ShellCheck
+on `tests/` and then `bats --recursive tests/` on every push and pull request
+to `master`.
+
+```text
+tests/
+├── scripts/*.bats          # scripts/lint-changed.sh
+├── github-scripts/*.bats   # .github/scripts/qc-*.sh
+├── workflows/*.bats        # reusable workflow helper-path contract
+├── helpers/setup.bash      # sandbox, stubs, fixture git repos
+├── stubs/                  # fake npm, npx, shfmt, curl, …
+└── fixtures/               # changed-path lists, typo config, sample YAML
+```
 
 ## Contributing
 

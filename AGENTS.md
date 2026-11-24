@@ -64,7 +64,12 @@ metadata, CI and quality, and exceptions.
 5. **Pinned tool versions** live in one `QC_*_VERSION` env block at the top of
    each workflow; bump them deliberately via PRs (Dependabot does not manage
    `run:`-step installs).
-6. **Line length**: `.yamllint` max 80 columns; `# yamllint disable-line` only for
+6. **Reusable workflow helpers**: jobs that need `.github/scripts/qc-*.sh` must
+   check out this repository at `${{ job.workflow_sha }}` into `.qc-tooling`
+   (`persist-credentials: false`) and source helpers from `QC_SCRIPTS`. Never
+   source `.github/scripts/` from the caller workspace — that path only exists
+   when quality-checks is the caller.
+7. **Line length**: `.yamllint` max 80 columns; `# yamllint disable-line` only for
    long action SHAs and required-check `if:` expressions.
 
 Do not commit unless the user asks.
