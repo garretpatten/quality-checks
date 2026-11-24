@@ -185,9 +185,11 @@ jobs:
           fi
 
       - name: 'Install ESLint'
+        env:
+          ESLINT_VERSION: 10.15.0
         run: |
           set -euo pipefail
-          npm install -g eslint
+          npm install -g "eslint@${ESLINT_VERSION}"
 
       - name: 'Get changed JavaScript/TypeScript files'
         id: changed-files
@@ -257,9 +259,11 @@ jobs:
           fetch-depth: 0
 
       - name: 'Install Hadolint'
+        env:
+          HADOLINT_VERSION: v2.15.1
         run: |
           set -euo pipefail
-          HADOLINT_URL="https://github.com/hadolint/hadolint/releases/latest/download/hadolint-Linux-x86_64"
+          HADOLINT_URL="https://github.com/hadolint/hadolint/releases/download/${HADOLINT_VERSION}/hadolint-Linux-x86_64"
           curl -fsSL "${HADOLINT_URL}" -o hadolint
           chmod +x hadolint
           sudo mv hadolint /usr/local/bin/
@@ -400,9 +404,11 @@ jobs:
           node-version: ${{ inputs.node_version }}
 
       - name: 'Install markdownlint-cli2'
+        env:
+          MARKDOWNLINT_VERSION: 0.24.2
         run: |
           set -euo pipefail
-          npm install -g markdownlint-cli2
+          npm install -g "markdownlint-cli2@${MARKDOWNLINT_VERSION}"
 
       - name: 'Get changed Markdown files'
         id: changed-files
@@ -479,9 +485,11 @@ jobs:
           node-version: ${{ inputs.node_version }}
 
       - name: 'Install Prettier'
+        env:
+          PRETTIER_VERSION: 3.10.1
         run: |
           set -euo pipefail
-          npm install -g prettier
+          npm install -g "prettier@${PRETTIER_VERSION}"
 
       - name: 'Get changed files'
         id: changed-files
@@ -556,9 +564,11 @@ jobs:
           fetch-depth: 0
 
       - name: 'Install Ruff'
+        env:
+          RUFF_VERSION: 0.17.6
         run: |
           set -euo pipefail
-          pip3 install ruff
+          pip3 install "ruff==${RUFF_VERSION}"
 
       - name: 'Get changed Python files'
         id: changed-files
@@ -715,9 +725,11 @@ jobs:
           fetch-depth: 0
 
       - name: 'Install Taplo'
+        env:
+          TAPLO_VERSION: 0.10.0
         run: |
           set -euo pipefail
-          TAPLO_URL="https://github.com/tamasfe/taplo/releases/latest/download/taplo-linux-x86_64.gz"
+          TAPLO_URL="https://github.com/tamasfe/taplo/releases/download/${TAPLO_VERSION}/taplo-linux-x86_64.gz"
           curl -fsSL "${TAPLO_URL}" -o taplo.gz
           gunzip -f taplo.gz
           chmod +x taplo
@@ -791,9 +803,11 @@ jobs:
           fetch-depth: 0
 
       - name: 'Install yamllint'
+        env:
+          YAMLLINT_VERSION: 1.38.0
         run: |
           set -euo pipefail
-          pip3 install yamllint
+          pip3 install "yamllint==${YAMLLINT_VERSION}"
 
       - name: 'Get changed YAML files'
         id: changed-files
